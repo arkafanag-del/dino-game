@@ -1,0 +1,62 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #f7f7f7;
+    font-family: Arial, sans-serif;
+    /* Запрещаем выделение текста и синюю подсветку при тапах на iPhone */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.game-container {
+    position: relative;
+    width: 100%; /* Занимает всю ширину экрана iPhone */
+    height: 250px; /* Оптимальная высота для мобильной адаптации */
+    overflow: hidden;
+    background-color: #ffffff;
+    border-bottom: 2px solid #535353;
+    margin-top: 20px;
+}
+
+#score {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #535353;
+    z-index: 10;
+}
+
+.player {
+    position: absolute;
+    bottom: 0px;
+    left: 40px; /* На мобильных смещаем ближе к левому краю */
+    width: 50px; /* Чуть уменьшили размер для маленьких экранов */
+    height: 50px;
+    background-image: url('player.png');
+    background-size: cover;
+}
+
+.obstacle {
+    position: absolute;
+    bottom: 0px;
+    left: 100%;
+    width: 30px;
+    height: 50px;
+    background-image: url('obstacle.png');
+    background-size: cover;
+    animation: moveObstacle 1.8s linear forwards; /* На мобильных трасса короче, ускоряем анимацию */
+}
+
+@keyframes moveObstacle {
+    from {
+        left: 100%;
+    }
+    to {
+        left: -50px;
+    }
+}
