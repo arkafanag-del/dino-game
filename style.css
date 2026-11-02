@@ -1,62 +1,164 @@
-body, html {
-    margin: 0;
-    padding: 0;
+/* --- БАЗОВЫЕ СТИЛИ --- */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+    margin: 0; padding: 0; 
+    background-color: #05050a;
+    background-image: radial-gradient(circle at center, #111122 0%, #000 100%);
+    color: #fff;
+    font-family: 'Share Tech Mono', monospace;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100vh; height: 100dvh; /* Для iOS */
     overflow: hidden;
-    background-color: #f7f7f7;
-    font-family: Arial, sans-serif;
-    /* Запрещаем выделение текста и синюю подсветку при тапах на iPhone */
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
     user-select: none;
+    touch-action: none; /* Отключаем скролл и зум */
+}
+
+.crt-overlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,0.15), rgba(0,0,0,0.15) 1px, transparent 1px, transparent 2px);
+    pointer-events: none; z-index: 9999;
+}
+
+/* --- ВЕРХНЯЯ ПАНЕЛЬ --- */
+.top-panel {
+    width: 100%; max-width: 900px; 
+    display: flex; justify-content: space-between; padding: 10px 15px;
+    font-family: 'Press Start 2P', cursive; font-size: 14px; z-index: 10;
+}
+#coins-display { color: #ffd700; text-shadow: 0 0 10px #ffd700; }
+.score-board { display: flex; gap: 20px; }
+#high-score { color: #555; }
+#score { color: #00ff88; text-shadow: 0 0 10px #00ff88; }
+
+/* --- ИГРОВОЕ ПОЛЕ --- */
+.game-container {
+    position: relative; 
+    width: 100%; max-width: 900px; /* Резиновая ширина */
+    height: 400px; max-height: 50vh; /* Резиновая высота */
+    border: 3px solid #00ff88; border-radius: 8px; overflow: hidden;
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+    transition: border-color 1s ease, box-shadow 1s ease, background 1s ease;
+}
+
+.ground-line {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 2px;
+    background-color: #00ff88; box-shadow: 0 0 15px #00ff88; z-index: 10;
+}
+
+/* Биомы (без изменений) */
+.biome-desert { background: linear-gradient(to bottom, #1a0b2e 0%, #2d1b4e 50%, #0d0518 100%); }
+.biome-jungle { background: linear-gradient(to bottom, #051a11 0%, #0d3b22 50%, #020a06 100%); border-color: #00ff88; }
+.biome-ice { background: linear-gradient(to bottom, #05142e 0%, #0f2b54 50%, #020612 100%); border-color: #00d4ff; }
+.biome-volcano { background: linear-gradient(to bottom, #2e0505 0%, #54100f 50%, #120202 100%); border-color: #ff2a2a; }
+
+/* --- ПАНЕЛЬ КВЕСТОВ --- */
+.quest-panel {
+    position: absolute; top: 10px; left: 10px;
+    background: rgba(0, 0, 0, 0.6); border: 1px solid #00ff88;
+    border-radius: 5px; padding: 8px; width: 160px; z-index: 50;
+    font-size: 11px; pointer-events: none; backdrop-filter: blur(5px);
+}
+.quest-panel h4 { margin: 0 0 5px 0; color: #00ff88; font-size: 10px; text-align: center; }
+.quest-item { margin-bottom: 4px; color: #ccc; }
+.quest-item.done { color: #00ff88; text-decoration: line-through; }
+
+/* --- МАГАЗИН --- */
+.shop-container {
+    position: absolute; top: 10px; right: 10px;
+    display: flex; gap: 8px; z-index: 50;
+}
+.shop-btn {
+    display: flex; flex-direction: column; align-items: center;
+    background: rgba(10, 10, 10, 0.85); border: 2px solid #444; color: #fff;
+    padding: 8px; border-radius: 8px; cursor: pointer; font-family: inherit;
+    transition: all 0.2s ease; width: 90px;
+}
+.shop-btn:hover:not(:disabled) { border-color: #00ff88; box-shadow: 0 0 10px #00ff88; }
+.shop-btn:disabled { opacity: 0.5; border-color: #00ff88; }
+.shop-btn .icon { font-size: 18px; }
+.shop-btn .title { font-size: 11px; color: #00ff88; }
+.shop-btn .desc { font-size: 9px; color: #aaa; }
+.shop-btn .price { font-size: 11px; color: #ffd700; }
+
+/* --- ИГРОК --- */
+.player {
+    position: absolute; bottom: 0; left: 50px; width: 50px; height: 60px;
+    background-image: url('player.png'); background-size: contain;
+    background-repeat: no-repeat; background-position: bottom;
+    z-index: 10; filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+}
+.player.running { animation: run 0.15s infinite alternate ease-in-out; }
+@keyframes run { from { transform: translateY(0); } to { transform: translateY(-3px); } }
+.player.ducking { height: 30px !important; width: 65px !important; }
+
+/* --- ПРЕПЯТСТВИЯ И МОНЕТЫ --- */
+.obstacle { position: absolute; bottom: 0; background-image: url('obstacle.png'); background-size: 100% 100%; z-index: 5; }
+.obstacle.flying { bottom: 70px; width: 55px; height: 40px; background-image: url('bird.png'); background-size: contain; background-color: transparent; animation: fly 0.4s infinite alternate ease-in-out; }
+@keyframes fly { 0% { transform: translateY(0); } 100% { transform: translateY(-10px); } }
+
+.coin { position: absolute; width: 22px; height: 22px; background-color: #ffd700; border-radius: 50%; box-shadow: 0 0 10px #ffd700; border: 2px solid #fff; z-index: 5; animation: spin 0.8s linear infinite; }
+@keyframes spin { 0% { transform: rotateY(0deg); } 100% { transform: rotateY(360deg); } }
+
+.cloud { position: absolute; background-color: rgba(255, 255, 255, 0.05); border-radius: 50px; z-index: 1; }
+.particle { position: absolute; background-color: #00ff88; border-radius: 50%; pointer-events: none; z-index: 9; animation: fadeOut 0.5s ease-out forwards; }
+@keyframes fadeOut { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: translateY(-20px); } }
+
+/* --- МОБИЛЬНЫЕ КНОПКИ (Изначально скрыты на ПК) --- */
+.mobile-controls {
+    display: none; /* Скрыто на десктопе */
+    position: absolute; bottom: 15px; left: 0; width: 100%;
+    justify-content: space-between; padding: 0 20px; z-index: 60;
+}
+
+.mobile-controls button {
+    width: 70px; height: 70px; border-radius: 50%;
+    background: rgba(0, 0, 0, 0.5); border: 2px solid #00ff88;
+    color: #00ff88; font-size: 30px; backdrop-filter: blur(5px);
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
     -webkit-tap-highlight-color: transparent;
 }
-
-.game-container {
-    position: relative;
-    width: 100%; /* Занимает всю ширину экрана iPhone */
-    height: 250px; /* Оптимальная высота для мобильной адаптации */
-    overflow: hidden;
-    background-color: #ffffff;
-    border-bottom: 2px solid #535353;
-    margin-top: 20px;
+.mobile-controls button:active {
+    background: rgba(0, 255, 136, 0.3); transform: scale(0.95);
 }
 
-#score {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    font-size: 18px;
-    font-weight: bold;
-    color: #535353;
-    z-index: 10;
+/* --- МЕНЮ --- */
+#game-menu {
+    position: absolute; inset: 0; background: rgba(5, 5, 10, 0.85);
+    backdrop-filter: blur(8px); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; z-index: 100; padding: 20px;
 }
+#game-menu h1 { margin: 0 0 10px 0; font-size: 24px; text-shadow: 0 0 10px #00ff88; text-align: center; }
+#menu-text { margin: 0 0 15px 0; font-size: 14px; color: #aaa; text-align: center; }
 
-.player {
-    position: absolute;
-    bottom: 0px;
-    left: 40px; /* На мобильных смещаем ближе к левому краю */
-    width: 50px; /* Чуть уменьшили размер для маленьких экранов */
-    height: 50px;
-    background-image: url('player.png');
-    background-size: cover;
-}
+.leaderboard { text-align: center; margin-bottom: 15px; background: rgba(0,0,0,0.5); padding: 10px 20px; border-radius: 8px; border: 1px solid #333; width: 100%; max-width: 300px; }
+.leaderboard h3 { margin: 0 0 10px 0; font-size: 12px; color: #ffd700; }
+#leaderboard-list { font-size: 14px; text-align: left; }
 
-.obstacle {
-    position: absolute;
-    bottom: 0px;
-    left: 100%;
-    width: 30px;
-    height: 50px;
-    background-image: url('obstacle.png');
-    background-size: cover;
-    animation: moveObstacle 1.8s linear forwards; /* На мобильных трасса короче, ускоряем анимацию */
-}
+#player-name-input { margin-bottom: 15px; padding: 10px; font-family: inherit; font-size: 16px; background: #000; color: #00ff88; border: 2px solid #00ff88; text-align: center; }
+#start-btn { padding: 12px 30px; font-size: 14px; font-family: 'Press Start 2P', cursive; background: transparent; color: #00ff88; border: 2px solid #00ff88; cursor: pointer; box-shadow: 0 0 15px rgba(0,255,136,0.2); }
+#start-btn:active { background: #00ff88; color: #000; }
 
-@keyframes moveObstacle {
-    from {
-        left: 100%;
-    }
-    to {
-        left: -50px;
-    }
+/* --- АДАПТИВНОСТЬ ДЛЯ ТЕЛЕФОНОВ (Срабатывает, если экран меньше 900px) --- */
+@media (max-width: 900px) {
+    .top-panel { font-size: 10px; padding: 10px; }
+    .game-container { height: 55vh; border-width: 2px; border-radius: 0; } /* На телефоне нет скруглений */
+    
+    /* Прячем квесты на телефоне, чтобы не закрывали экран */
+    .quest-panel { display: none; }
+
+    /* Магазин делаем компактнее */
+    .shop-container { top: 5px; right: 5px; gap: 5px; }
+    .shop-btn { width: 65px; padding: 5px; border-width: 1px; }
+    .shop-btn .title { font-size: 9px; }
+    .shop-btn .desc { display: none; } /* Прячем описание */
+    .shop-btn .price { font-size: 10px; }
+
+    /* Показываем мобильные кнопки! */
+    .mobile-controls { display: flex; }
+    
+    /* Уменьшаем меню */
+    #game-menu h1 { font-size: 18px; }
+    .leaderboard { padding: 5px 10px; }
+    #leaderboard-list { font-size: 12px; }
 }

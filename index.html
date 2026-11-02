@@ -2,17 +2,90 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <!-- Этот тег обязателен, чтобы игра идеально сидела на экране iPhone -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dino Game Mobile</title>
+    <!-- Важные мета-теги для мобильных устройств, чтобы не было зума -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <title>Dino Ultimate RPG</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="game-container">
-        <div id="score">HI 0</div>
-        <div class="player"></div>
-        <div id="obstacles"></div>
+
+    <div class="crt-overlay"></div>
+
+    <div class="top-panel">
+        <div id="coins-display">🪙 0</div>
+        <div class="score-board">
+            <span id="high-score">HI 00000</span>
+            <span id="score">00000</span>
+        </div>
     </div>
+
+    <div class="game-container biome-desert" id="main-game">
+        
+        <div class="ground-line"></div>
+
+        <div class="quest-panel">
+            <h4>📜 КВЕСТЫ</h4>
+            <div id="quest-list"></div>
+        </div>
+
+        <div class="shop-container">
+            <button id="buy-glasses-btn" class="shop-btn">
+                <span class="icon">🕶️</span>
+                <span class="title">Очки</span>
+                <span class="desc">x2 доход</span>
+                <span class="price">🪙 15</span>
+            </button>
+            
+            <button id="buy-shoes-btn" class="shop-btn">
+                <span class="icon">👟</span>
+                <span class="title">Кроссовки</span>
+                <span class="desc">Прыжок</span>
+                <span class="price">🪙 30</span>
+            </button>
+
+            <button id="buy-magnet-btn" class="shop-btn">
+                <span class="icon">🧲</span>
+                <span class="title">Магнит</span>
+                <span class="desc">Монеты</span>
+                <span class="price">🪙 50</span>
+            </button>
+        </div>
+
+        <div id="clouds"></div>
+        <div id="obstacles"></div>
+        <div id="coins-container"></div>
+        <div id="particles-container"></div>
+
+        <div class="player"></div>
+
+        <!-- МОБИЛЬНЫЕ КНОПКИ УПРАВЛЕНИЯ -->
+        <div class="mobile-controls">
+            <button id="mobile-jump-btn">⬆️</button>
+            <button id="mobile-duck-btn">⬇️</button>
+        </div>
+
+        <div id="game-menu">
+            <h1 id="menu-title">ДИНОЗАВРИК</h1>
+            <p id="menu-text">Нажмите Пробел или кнопку, чтобы начать</p>
+            
+            <div class="leaderboard">
+                <h3>🏆 ТОП ИГРОКОВ</h3>
+                <div id="leaderboard-list">Загрузка...</div>
+            </div>
+
+            <input type="text" id="player-name-input" placeholder="Имя" maxlength="20" style="display: none;">
+            <button id="start-btn">ИГРАТЬ</button>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
