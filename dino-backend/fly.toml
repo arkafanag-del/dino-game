@@ -1,0 +1,20 @@
+# Имя твоего приложения (можешь изменить на свое)
+app = "dino-game-backend"
+
+# Основной регион (можно оставить или выбрать ближайший)
+primary_region = "ams"
+
+[build]
+  # Указываем, что сборка будет происходить из корня
+  dockerfile = "Dockerfile"
+
+[env]
+  # Порт, который будет слушать приложение
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
