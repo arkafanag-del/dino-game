@@ -10,6 +10,7 @@ const coinsDisplay = document.getElementById('coins-display');
 const gameContainer = document.querySelector('.game-container');
 const shopContainer = document.querySelector('.shop-container');
 const questListUI = document.getElementById('quest-list');
+const muteBtn = document.getElementById('mute-btn');
 
 const buyGlassesBtn = document.getElementById('buy-glasses-btn');
 const buyShoesBtn = document.getElementById('buy-shoes-btn');
@@ -40,6 +41,105 @@ weatherContainer.style.cssText = 'position: absolute; inset: 0; pointer-events: 
 gameContainer.appendChild(weatherContainer);
 
 const API_BASE = 'https://dino-game-backend-summer-tide-6155.fly.dev';
+
+// --- ЗВУКОВОЙ ДВИЖОК (WEB AUDIO API) ---
+let audioCtx;
+let isMuted = false;
+let musicTimer = null;
+let musicStep = 0;
+
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+}
+
+function playTone(startFreq, endFreq, duration, type) {
+    if (isMuted || !audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    
+    osc.type = type;
+    osc.frequency.setValueAtTime(startFreq, audioCtx.currentTime);
+    if (endFreq) {
+        osc.frequency.exponentialRampToValueAtTime(endFreq, audioCtx.currentTime + duration);
+    }
+    
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+    
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+}
+
+function playSFX(action) {
+    initAudio();
+    if (isMuted) return;
+    
+    if (action === 'jump') playTone(150, 300, 0.15, 'square');
+    if (action === 'coin') {
+        playTone(800, 1000, 0.1, 'sine');
+        setTimeout(() => playTone(1200, 1500, 0.1, 'sine'), 50);
+    }
+    if (action === 'death') playTone(300, 50, 0.5, 'sawtooth');
+    if (action === 'click') playTone(600, 600, 0.05, 'square');
+    if (action === 'buy') {
+        playTone(400, 600, 0.1, 'square');
+        setTimeout(() => playTone(600, 800, 0.1, 'square'), 100);
+        setTimeout(() => playTone(800, 1000, 0.1, 'square'), 200);
+    }
+}
+
+// --- ЭПИЧНАЯ МУЗЫКА ДЛЯ БИОМОВ ---
+function startBiomeMusic(tier) {
+    if (musicTimer) clearInterval(musicTimer);
+    if (isMuted) return;
+    
+    musicStep = 0;
+    
+    // Ноты для каждого биома
+    const scales = {
+        0: [130.81, 146.83, 164.81, 174.61, 196.00, 220.00], // Пустыня
+        1: [261.63, 311.13, 349.23, 392.00, 466.16],         // Джунгли
+        2: [523.25, 659.25, 783.99, 1046.50],                // Ледники
+        3: [65.41, 77.78, 82.41, 98.00, 103.83]              // Вулкан
+    };
+    
+    const scale = scales[tier] || scales[0];
+    const tempo = tier === 3 ? 150 : (tier === 1 ? 200 : 250); 
+
+    const playSeqNote = (freq, type, duration) => {
+        if (isMuted || !isGameRunning) return;
+        playTone(freq, freq, duration, type);
+    };
+
+    musicTimer = setInterval(() => {
+        if (!isGameRunning || isMuted) return;
+        
+        let noteFreq = scale[musicStep % scale.length];
+        
+        if (tier === 0) {
+            if (musicStep % 4 === 0) playSeqNote(noteFreq, 'triangle', 0.4);
+            if (musicStep % 8 === 2) playSeqNote(noteFreq * 4, 'sine', 0.2);
+        } else if (tier === 1) {
+            playSeqNote(noteFreq * 2, 'square', 0.1);
+            if (musicStep % 2 === 0) playSeqNote(noteFreq / 2, 'sawtooth', 0.15);
+        } else if (tier === 2) {
+            playSeqNote(noteFreq, 'sine', 0.5);
+            if (musicStep % 3 === 0) playSeqNote(noteFreq * 1.5, 'triangle', 0.4);
+        } else {
+            playSeqNote(noteFreq, 'sawtooth', 0.2);
+            if (musicStep % 2 === 0) playSeqNote(noteFreq * 3, 'square', 0.1);
+        }
+        
+        musicStep++;
+    }, tempo);
+}
 
 // --- СОСТОЯНИЕ ИГРЫ ---
 let score = 0, isGameRunning = false, lastScore = 0, isDucking = false;
@@ -154,12 +254,14 @@ function renderSkins() {
         card.innerHTML = `<span class="skin-icon">${skin.icon}</span><span class="skin-name">${skin.name}</span>${priceHtml}`;
         
         card.onclick = () => {
+            playSFX('click');
             if (isUnlocked) {
                 selectedSkin = skin.id;
                 updatePlayerSkin();
                 renderSkins();
                 savePlayerProfile(localStorage.getItem('dino_playername') || 'Игрок');
             } else if (coins >= skin.price) {
+                playSFX('buy');
                 coins -= skin.price;
                 unlockedSkins.push(skin.id);
                 selectedSkin = skin.id;
@@ -188,6 +290,7 @@ function updateQuest(id) {
     if (q && !q.done) {
         q.current++;
         if (q.current >= q.target) {
+            playSFX('buy');
             q.done = true;
             coins += q.reward;
             coinsDisplay.textContent = `🪙 ${coins}`;
@@ -199,10 +302,16 @@ function updateQuest(id) {
 
 function updateBiome(scoreVal) {
     gameContainer.className = 'game-container'; 
-    if (scoreVal < 300) gameContainer.classList.add('biome-desert');
-    else if (scoreVal < 600) gameContainer.classList.add('biome-jungle');
-    else if (scoreVal < 1000) gameContainer.classList.add('biome-ice');
-    else gameContainer.classList.add('biome-volcano');
+    let newTier = 0;
+    if (scoreVal < 300) { gameContainer.classList.add('biome-desert'); newTier = 0; }
+    else if (scoreVal < 600) { gameContainer.classList.add('biome-jungle'); newTier = 1; }
+    else if (scoreVal < 1000) { gameContainer.classList.add('biome-ice'); newTier = 2; }
+    else { gameContainer.classList.add('biome-volcano'); newTier = 3; }
+
+    if (isGameRunning && newTier !== currentBiomeTier) {
+        startBiomeMusic(newTier);
+    }
+    currentBiomeTier = newTier;
 }
 
 function spawnWeather() {
@@ -289,6 +398,7 @@ function createParticles(x, y) {
 
 function doJump() {
     if (isGrounded && isGameRunning && !isDucking) {
+        playSFX('jump');
         yVelocity = currentJumpForce;
         isGrounded = false;
         player.classList.remove('running');
@@ -338,13 +448,22 @@ mobileJumpBtn.addEventListener('touchstart', (e) => {
 mobileDuckBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startDucking(); });
 mobileDuckBtn.addEventListener('touchend', (e) => { e.preventDefault(); endDucking(); });
 
+muteBtn.onclick = () => {
+    isMuted = !isMuted;
+    muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    if (isMuted && musicTimer) clearInterval(musicTimer);
+    else if (isGameRunning) startBiomeMusic(currentBiomeTier);
+};
+
 dailyBtn.onclick = () => {
+    playSFX('click');
     dailyModal.style.display = 'block';
     claimDailyBtn.style.display = 'block';
     dailyText.innerHTML = "Заходи каждый день, чтобы получать больше монет!";
 };
-skinsBtn.onclick = () => { renderSkins(); skinsModal.style.display = 'block'; };
+skinsBtn.onclick = () => { playSFX('click'); renderSkins(); skinsModal.style.display = 'block'; };
 closeBtns.forEach(btn => btn.onclick = () => {
+    playSFX('click');
     dailyModal.style.display = 'none';
     skinsModal.style.display = 'none';
 });
@@ -359,6 +478,7 @@ claimDailyBtn.onclick = async () => {
         const data = await res.json();
         
         if (data.status === 'success') {
+            playSFX('buy');
             coins += data.reward;
             coinsDisplay.textContent = `🪙 ${coins}`;
             dailyText.innerHTML = `🎉 Вы получили <strong>${data.reward}</strong> монет!<br>Стрик: ${data.streak} дней подряд!`;
@@ -373,6 +493,7 @@ claimDailyBtn.onclick = async () => {
 
 buyGlassesBtn.onclick = () => {
     if (coins >= glassesPrice && !hasGlasses) {
+        playSFX('buy');
         coins -= glassesPrice; hasGlasses = true;
         coinsDisplay.textContent = `🪙 ${coins}`;
         buyGlassesBtn.disabled = true; buyGlassesBtn.querySelector('.price').textContent = "КУПЛЕНО";
@@ -381,6 +502,7 @@ buyGlassesBtn.onclick = () => {
 };
 buyShoesBtn.onclick = () => {
     if (coins >= shoesPrice && !hasShoes) {
+        playSFX('buy');
         coins -= shoesPrice; hasShoes = true;
         currentJumpForce = 14;
         coinsDisplay.textContent = `🪙 ${coins}`;
@@ -390,6 +512,7 @@ buyShoesBtn.onclick = () => {
 };
 buyMagnetBtn.onclick = () => {
     if (coins >= magnetPrice && !hasMagnet) {
+        playSFX('buy');
         coins -= magnetPrice; hasMagnet = true;
         coinsDisplay.textContent = `🪙 ${coins}`;
         buyMagnetBtn.disabled = true; buyMagnetBtn.querySelector('.price').textContent = "КУПЛЕНО";
@@ -420,7 +543,6 @@ function gameLoop() {
     const tier = Math.floor(currentScore / 300);
     if (tier !== currentBiomeTier) {
         updateBiome(currentScore);
-        currentBiomeTier = tier;
     }
 
     if (currentScore > highScore) {
@@ -428,14 +550,10 @@ function gameLoop() {
         highScoreDisplay.textContent = `HI ${String(highScore).padStart(5, '0')}`;
     }
 
-    // --- СЛОЖНОСТЬ И СПАВН ---
-    // Базовая скорость (на телефоне медленнее, на ПК быстрее)
     const baseSpeed = window.innerWidth < 900 ? 3.5 : 6;
-    // Скорость растет с каждым биомом (0, 1, 2, 3)
     const currentSpeed = baseSpeed + (currentBiomeTier * 0.8); 
 
     spawnObstacleTimer++; 
-    // Интервал спавна уменьшается с каждым биомом (появляются чаще)
     const baseSpawn = 120 + Math.random() * 60;
     const currentSpawnRate = Math.max(60, baseSpawn - (currentBiomeTier * 15));
     
@@ -447,7 +565,6 @@ function gameLoop() {
     spawnCloudTimer++; if (spawnCloudTimer > 300) { spawnCloud(); spawnCloudTimer = 0; }
     spawnWeatherTimer++; if (spawnWeatherTimer > 10) { spawnWeather(); spawnWeatherTimer = 0; }
 
-    // Движение препятствий (Используем currentSpeed)
     const obstacles = document.querySelectorAll('.obstacle');
     for (let i = obstacles.length - 1; i >= 0; i--) {
         const obs = obstacles[i];
@@ -460,7 +577,6 @@ function gameLoop() {
         if (currentLeft < -150) obs.remove();
     }
 
-    // Движение монет (Используем currentSpeed)
     const coinElements = document.querySelectorAll('.coin');
     coinElements.forEach(coin => {
         let currentLeft = parseFloat(coin.style.left) || gameContainer.offsetWidth;
@@ -492,6 +608,7 @@ function gameLoop() {
         const hit = !(r1.right < r2.left || r1.left > r2.right || r1.bottom < r2.top || r1.top > r2.bottom);
 
         if (hit) {
+            playSFX('coin');
             coin.remove();
             coins += hasGlasses ? 2 : 1;
             coinsDisplay.textContent = `🪙 ${coins}`;
@@ -505,7 +622,7 @@ function gameLoop() {
     const clouds = document.querySelectorAll('.cloud');
     clouds.forEach(cloud => {
         let currentLeft = parseFloat(cloud.style.left) || gameContainer.offsetWidth;
-        currentLeft -= 1.5; // Облака плывут с постоянной скоростью
+        currentLeft -= 1.5; 
         cloud.style.left = currentLeft + 'px';
         if (currentLeft < -100) cloud.remove();
     });
@@ -539,6 +656,9 @@ function checkCollision(obj1, obj2) {
 }
 
 function startGame() {
+    initAudio();
+    playSFX('click');
+    
     const playerName = (nameInput.value.trim() || 'Аноним').slice(0, 20);
     localStorage.setItem('dino_playername', playerName);
 
@@ -557,6 +677,7 @@ function startGame() {
     
     currentBiomeTier = 0;
     updateBiome(0);
+    startBiomeMusic(0);
     scoreDisplay.textContent = '00000';
     coinsDisplay.textContent = `🪙 ${coins}`;
 
@@ -567,6 +688,8 @@ function startGame() {
 function endGame() {
     if (!isGameRunning) return;
     isGameRunning = false; cancelAnimationFrame(animationFrameId);
+    if (musicTimer) clearInterval(musicTimer);
+    playSFX('death');
 
     localStorage.setItem('dino_highscore', String(highScore));
     lastScore = Math.floor(score / 10);
@@ -584,6 +707,7 @@ function endGame() {
 }
 
 function activateAdminMode() {
+    playSFX('buy');
     coins += 99999;
     coinsDisplay.textContent = `🪙 ${coins}`;
     const name = localStorage.getItem('dino_playername') || 'Игрок';

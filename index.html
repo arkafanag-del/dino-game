@@ -2,49 +2,42 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <!-- Важные мета-теги для мобильных устройств, чтобы не было зума -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    
     <title>Dino Ultimate RPG</title>
-    
-    <!-- Подключаем пиксельные шрифты от Google -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- Эффект старого монитора -->
     <div class="crt-overlay"></div>
 
-    <!-- Верхняя панель (Монеты и Очки) -->
     <div class="top-panel">
-        <div id="coins-display">🪙 0</div>
+        <div style="display: flex; gap: 15px; align-items: center;">
+            <div id="coins-display">🪙 0</div>
+            <button id="mute-btn" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 0;">🔊</button>
+        </div>
         <div class="score-board">
             <span id="high-score">HI 00000</span>
             <span id="score">00000</span>
         </div>
     </div>
 
-    <!-- Игровое поле -->
-    <div class="game-container biome-desert" id="main-game"> 
-             <!-- НОВЫЙ СЛОЙ ДЛЯ ФОНА -->
-        <div class="bg-layer"></div> 
+    <div class="game-container biome-desert" id="main-game">
         
-        <!-- Неоновая линия земли --> 
+        <!-- ВОЗВРАЩАЕМ ФОН СЮДА -->
+        <div class="bg-layer"></div>
+
         <div class="ground-line"></div>
 
-        <!-- Панель квестов -->
         <div class="quest-panel">
             <h4>📜 КВЕСТЫ</h4>
             <div id="quest-list"></div>
         </div>
 
-        <!-- Магазин улучшений -->
         <div class="shop-container">
             <button id="buy-glasses-btn" class="shop-btn">
                 <span class="icon">🕶️</span>
@@ -68,25 +61,21 @@
             </button>
         </div>
 
-        <!-- Контейнеры для спавна объектов -->
         <div id="clouds"></div>
         <div id="obstacles"></div>
         <div id="coins-container"></div>
         <div id="particles-container"></div>
 
-        <!-- Сам динозаврик -->
         <div class="player"></div>
 
-        <!-- Главное меню (Game Over / Старт) -->
         <div id="game-menu">
             <h1 id="menu-title">ДИНОЗАВРИК</h1>
             <p id="menu-text">Нажмите Пробел или кнопку, чтобы начать</p>
             
-            <!-- НОВЫЕ КНОПКИ МЕНЮ (Бонус и Скины) -->
             <div class="menu-actions">
                 <button id="daily-btn" class="action-btn">🎁 БОНУС</button>
                 <button id="skins-btn" class="action-btn">🦖 СКИНЫ</button>
-                 <a href="leaderboard.html" class="action-btn" style="text-decoration: none;">🏆 РЕКОРДЫ</a>
+                <a href="leaderboard.html" class="action-btn" style="text-decoration: none;">🏆 РЕКОРДЫ</a>
             </div>
 
             <div class="leaderboard">
@@ -98,7 +87,6 @@
             <button id="start-btn">ИГРАТЬ</button>
         </div>
 
-        <!-- МОДАЛЬНОЕ ОКНО: ЕЖЕДНЕВНЫЙ БОНУС -->
         <div id="daily-modal" class="modal" style="display: none;">
             <h2>🎁 ЕЖЕДНЕВНЫЙ БОНУС</h2>
             <p id="daily-text">Заходи каждый день, чтобы получать больше монет!</p>
@@ -106,18 +94,14 @@
             <button class="close-modal-btn">ЗАКРЫТЬ</button>
         </div>
 
-        <!-- МОДАЛЬНОЕ ОКНО: ВЫБОР СКИНОВ -->
         <div id="skins-modal" class="modal" style="display: none;">
             <h2>🦖 ВЫБОР ПЕРСОНАЖА</h2>
-            <div class="skins-grid" id="skins-grid">
-                <!-- Карточки скинов будут добавлены через JavaScript -->
-            </div>
+            <div class="skins-grid" id="skins-grid"></div>
             <button class="close-modal-btn">ЗАКРЫТЬ</button>
         </div>
 
     </div>
 
-    <!-- МОБИЛЬНЫЕ КНОПКИ УПРАВЛЕНИЯ (находятся ПОД игровым полем) -->
     <div class="mobile-controls">
         <button id="mobile-jump-btn">⬆️</button>
         <button id="mobile-duck-btn">⬇️</button>

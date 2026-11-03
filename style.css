@@ -262,3 +262,10 @@ body {
     .menu-actions { flex-direction: column; width: 100%; max-width: 200px; gap: 8px; }
     .action-btn { padding: 12px; font-size: 14px; }
 }
+/* --- КНОПКА ЗВУКА --- */
+#mute-btn {
+    transition: transform 0.2s;
+}
+#mute-btn:hover {
+    transform: scale(1.2);
+}
