@@ -315,7 +315,7 @@ function gameLoop() {
     }
 
     spawnObstacleTimer++; if (spawnObstacleTimer > 130) { spawnObstacle(); spawnObstacleTimer = 0; }
-    spawnCoinTimer++; if (spawnCoinTimer > 80) { spawnCoin(); spawnCoinTimer = 0; }
+    spawnCoinTimer++; if (spawnCoinTimer > 140) { spawnCoin(); spawnCoinTimer = 0; }
     spawnCloudTimer++; if (spawnCloudTimer > 300) { spawnCloud(); spawnCloudTimer = 0; }
 
     // ВАЖНО: На мобилках скорость движения объектов привязана к ширине экрана (vw)
@@ -384,7 +384,7 @@ function checkCollision(obj1, obj2) {
     const r1 = obj1.getBoundingClientRect();
     const r2 = obj2.getBoundingClientRect();
     // Уменьшаем отступ на мобилках для более точного хитбокса
-    const padding = window.innerWidth < 900 ? 8 : 12;
+    const padding = window.innerWidth < 900 ? 18 : 12;
     return !(
         r1.right - padding < r2.left + padding || 
         r1.left + padding > r2.right - padding ||

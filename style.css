@@ -142,8 +142,11 @@ body {
 /* --- АДАПТИВНОСТЬ ДЛЯ ТЕЛЕФОНОВ (Срабатывает, если экран меньше 900px) --- */
 @media (max-width: 900px) {
     .top-panel { font-size: 10px; padding: 10px; }
-    .game-container { height: 55vh; border-width: 2px; border-radius: 0; } /* На телефоне нет скруглений */
+    .game-container { height: 55vh; border-width: 2px; border-radius: 0; }
     
+    /* Динозаврик теперь стоит чуть правее */
+    .player { left: 80px; }
+
     /* Прячем квесты на телефоне, чтобы не закрывали экран */
     .quest-panel { display: none; }
 
@@ -151,11 +154,21 @@ body {
     .shop-container { top: 5px; right: 5px; gap: 5px; }
     .shop-btn { width: 65px; padding: 5px; border-width: 1px; }
     .shop-btn .title { font-size: 9px; }
-    .shop-btn .desc { display: none; } /* Прячем описание */
+    .shop-btn .desc { display: none; } 
     .shop-btn .price { font-size: 10px; }
 
     /* Показываем мобильные кнопки! */
-    .mobile-controls { display: flex; }
+    .mobile-controls { display: flex; padding: 0 10px; bottom: 10px; }
+    
+    /* Кнопки стали маленькими и полупрозрачными, чтобы не мешать играть */
+    .mobile-controls button {
+        width: 50px; 
+        height: 50px; 
+        font-size: 20px;
+        background: rgba(0, 0, 0, 0.3); /* Почти прозрачный фон */
+        border: 1px solid rgba(0, 255, 136, 0.5); /* Мягкая рамка */
+        opacity: 0.7;
+    }
     
     /* Уменьшаем меню */
     #game-menu h1 { font-size: 18px; }
