@@ -21,6 +21,7 @@
     <!-- Эффект старого монитора -->
     <div class="crt-overlay"></div>
 
+    <!-- Верхняя панель (Монеты и Очки) -->
     <div class="top-panel">
         <div id="coins-display">🪙 0</div>
         <div class="score-board">
@@ -74,22 +75,46 @@
         <!-- Сам динозаврик -->
         <div class="player"></div>
 
-        <!-- Меню (Game Over / Старт) -->
+        <!-- Главное меню (Game Over / Старт) -->
         <div id="game-menu">
             <h1 id="menu-title">ДИНОЗАВРИК</h1>
             <p id="menu-text">Нажмите Пробел или кнопку, чтобы начать</p>
             
+            <!-- НОВЫЕ КНОПКИ МЕНЮ (Бонус и Скины) -->
+            <div class="menu-actions">
+                <button id="daily-btn" class="action-btn">🎁 БОНУС</button>
+                <button id="skins-btn" class="action-btn">🦖 СКИНЫ</button>
+            </div>
+
             <div class="leaderboard">
                 <h3>🏆 ТОП ИГРОКОВ</h3>
                 <div id="leaderboard-list">Загрузка...</div>
             </div>
 
-            <input type="text" id="player-name-input" placeholder="Имя" maxlength="20" style="display: none;">
+            <input type="text" id="player-name-input" placeholder="Введите имя" maxlength="20" style="display: none;">
             <button id="start-btn">ИГРАТЬ</button>
         </div>
+
+        <!-- МОДАЛЬНОЕ ОКНО: ЕЖЕДНЕВНЫЙ БОНУС -->
+        <div id="daily-modal" class="modal" style="display: none;">
+            <h2>🎁 ЕЖЕДНЕВНЫЙ БОНУС</h2>
+            <p id="daily-text">Заходи каждый день, чтобы получать больше монет!</p>
+            <button id="claim-daily-btn" class="action-btn">ЗАБРАТЬ</button>
+            <button class="close-modal-btn">ЗАКРЫТЬ</button>
+        </div>
+
+        <!-- МОДАЛЬНОЕ ОКНО: ВЫБОР СКИНОВ -->
+        <div id="skins-modal" class="modal" style="display: none;">
+            <h2>🦖 ВЫБОР ПЕРСОНАЖА</h2>
+            <div class="skins-grid" id="skins-grid">
+                <!-- Карточки скинов будут добавлены через JavaScript -->
+            </div>
+            <button class="close-modal-btn">ЗАКРЫТЬ</button>
+        </div>
+
     </div>
 
-    <!-- МОБИЛЬНЫЕ КНОПКИ УПРАВЛЕНИЯ (теперь они ПОД игрой) -->
+    <!-- МОБИЛЬНЫЕ КНОПКИ УПРАВЛЕНИЯ (находятся ПОД игровым полем) -->
     <div class="mobile-controls">
         <button id="mobile-jump-btn">⬆️</button>
         <button id="mobile-duck-btn">⬇️</button>

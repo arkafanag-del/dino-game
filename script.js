@@ -1,3 +1,4 @@
+// --- DOM ЭЛЕМЕНТЫ ---
 const player = document.querySelector('.player');
 const obstaclesContainer = document.getElementById('obstacles');
 const cloudsContainer = document.getElementById('clouds');
@@ -21,45 +22,62 @@ const startBtn = document.getElementById('start-btn');
 const leaderboardList = document.getElementById('leaderboard-list');
 const nameInput = document.getElementById('player-name-input');
 
+// Новые элементы (Бонусы и Скины)
+const dailyBtn = document.getElementById('daily-btn');
+const skinsBtn = document.getElementById('skins-btn');
+const dailyModal = document.getElementById('daily-modal');
+const skinsModal = document.getElementById('skins-modal');
+const dailyText = document.getElementById('daily-text');
+const claimDailyBtn = document.getElementById('claim-daily-btn');
+const skinsGrid = document.getElementById('skins-grid');
+const closeBtns = document.querySelectorAll('.close-modal-btn');
+
 // Мобильные кнопки
 const mobileJumpBtn = document.getElementById('mobile-jump-btn');
 const mobileDuckBtn = document.getElementById('mobile-duck-btn');
 
-const API_BASE = 'https://dino-game-backend-summer-tide-6155.fly.dev';
+const API_BASE = 'https://dino-game-backend-summer-tide-6155.fly.dev'; // Твой сервер
 
-let score = 0;
-let isGameRunning = false;
-let lastScore = 0;
-let isDucking = false;
-let animationFrameId;
-let currentBiomeTier = -1;
+// --- СОСТОЯНИЕ ИГРЫ ---
+let score = 0, isGameRunning = false, lastScore = 0, isDucking = false;
+let animationFrameId, currentBiomeTier = -1;
 
+// Экономика
 let coins = 0;
 let hasGlasses = false, hasShoes = false, hasMagnet = false;
 const glassesPrice = 15, shoesPrice = 30, magnetPrice = 50;
 
-let runJumps = 0;
-let runCoins = 0;
+// Скины
+let selectedSkin = 'default';
+let unlockedSkins = ['default'];
+const skinList = [
+    { id: 'default', icon: '🦖', name: 'Динозавр', price: 0 },
+    { id: 'raptor', icon: '🦅', name: 'Раптор', price: 100 },
+    { id: 'trike', icon: '🦏', name: 'Трицератопс', price: 100 }
+];
 
+// Квесты
+let runJumps = 0, runCoins = 0;
 let quests = [
     { id: 'jump', text: 'Прыгни 5 раз', target: 5, current: 0, reward: 5, done: false },
     { id: 'coin', text: 'Собери 10 монет', target: 10, current: 0, reward: 10, done: false }
 ];
 
+// Физика
 let yPosition = 0, yVelocity = 0, isGrounded = true;
 const gravity = 0.5;
 let currentJumpForce = 11;
-
 let spawnObstacleTimer = 0, spawnCoinTimer = 0, spawnCloudTimer = 0;
 
 let highScore = parseInt(localStorage.getItem('dino_highscore'), 10) || 0;
 highScoreDisplay.textContent = `HI ${String(highScore).padStart(5, '0')}`;
 
+// --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
 function escapeHtml(s) { 
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); 
 }
 
-// --- БЭКЕНД ---
+// --- БЭКЕНД: РЕКОРДЫ ---
 async function loadOnlineLeaderboard() {
     try {
         const res = await fetch(`${API_BASE}/api/leaderboard`);
@@ -84,6 +102,7 @@ async function sendScoreToBackend(playerName, playerScore) {
     } catch (e) { console.error(e); }
 }
 
+// --- БЭКЕНД: ПРОФИЛЬ ---
 async function loadPlayerProfile(name) {
     try {
         const res = await fetch(`${API_BASE}/api/player/load`, {
@@ -91,8 +110,13 @@ async function loadPlayerProfile(name) {
             body: JSON.stringify({ name: name })
         });
         const data = await res.json();
+        
         coins = data.coins;
         coinsDisplay.textContent = `🪙 ${coins}`;
+        
+        selectedSkin = data.selected_skin || 'default';
+        unlockedSkins = data.unlocked_skins ? data.unlocked_skins.split(',') : ['default'];
+        updatePlayerSkin();
     } catch (e) { console.error('Ошибка загрузки профиля', e); }
 }
 
@@ -101,9 +125,52 @@ async function savePlayerProfile(name) {
     try {
         await fetch(`${API_BASE}/api/player/save`, {
             method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ name: name, coins: coins, quests_done: 0 })
+            body: JSON.stringify({ 
+                name: name, 
+                coins: coins, 
+                quests_done: 0, 
+                selected_skin: selectedSkin, 
+                unlocked_skins: unlockedSkins.join(',')
+            })
         });
     } catch (e) { console.error('Ошибка сохранения профиля', e); }
+}
+
+// --- СКИНЫ ---
+function updatePlayerSkin() {
+    if (selectedSkin === 'default') player.style.filter = "drop-shadow(0 0 10px rgba(255, 255, 255, 0.5))";
+    else if (selectedSkin === 'raptor') player.style.filter = "hue-rotate(90deg) drop-shadow(0 0 10px #00ff88)";
+    else if (selectedSkin === 'trike') player.style.filter = "hue-rotate(-90deg) drop-shadow(0 0 10px #ff2a2a)";
+}
+
+function renderSkins() {
+    skinsGrid.innerHTML = '';
+    skinList.forEach(skin => {
+        const isUnlocked = unlockedSkins.includes(skin.id);
+        const card = document.createElement('div');
+        card.className = `skin-card ${selectedSkin === skin.id ? 'active' : ''}`;
+        
+        let priceHtml = isUnlocked ? '' : `<span style="font-size:10px; color:#ffd700">🔒 ${skin.price}</span>`;
+        card.innerHTML = `<span class="skin-icon">${skin.icon}</span><span class="skin-name">${skin.name}</span>${priceHtml}`;
+        
+        card.onclick = () => {
+            if (isUnlocked) {
+                selectedSkin = skin.id;
+                updatePlayerSkin();
+                renderSkins();
+                savePlayerProfile(localStorage.getItem('dino_playername') || 'Игрок');
+            } else if (coins >= skin.price) {
+                coins -= skin.price;
+                unlockedSkins.push(skin.id);
+                selectedSkin = skin.id;
+                coinsDisplay.textContent = `🪙 ${coins}`;
+                updatePlayerSkin();
+                renderSkins();
+                savePlayerProfile(localStorage.getItem('dino_playername') || 'Игрок');
+            }
+        };
+        skinsGrid.appendChild(card);
+    });
 }
 
 // --- КВЕСТЫ ---
@@ -125,8 +192,7 @@ function updateQuest(id) {
             q.done = true;
             coins += q.reward;
             coinsDisplay.textContent = `🪙 ${coins}`;
-            const name = localStorage.getItem('dino_playername') || 'Игрок';
-            savePlayerProfile(name); 
+            savePlayerProfile(localStorage.getItem('dino_playername') || 'Игрок'); 
         }
         renderQuests();
     }
@@ -142,13 +208,13 @@ function updateBiome(scoreVal) {
 }
 
 // --- СПАВН ---
-function spawnCloud() { /* ... */ 
+function spawnCloud() {
     const cloud = document.createElement('div');
     cloud.classList.add('cloud');
     cloud.style.width = Math.random() * 40 + 30 + 'px';
     cloud.style.height = (parseFloat(cloud.style.width) / 3) + 'px';
     cloud.style.top = Math.random() * 100 + 20 + 'px';
-    cloud.style.left = '100vw'; // Используем vw для мобилок
+    cloud.style.left = '100vw';
     cloudsContainer.appendChild(cloud);
 }
 
@@ -162,7 +228,7 @@ function spawnObstacle() {
         obstacle.style.height = Math.floor(Math.random() * 25) + 40 + 'px';
         obstacle.style.width = Math.random() > 0.6 ? '45px' : '25px';
     }
-    obstacle.style.left = '100vw'; // Используем vw
+    obstacle.style.left = '100vw';
     obstaclesContainer.appendChild(obstacle);
 }
 
@@ -170,7 +236,7 @@ function spawnCoin() {
     const coin = document.createElement('div');
     coin.classList.add('coin');
     coin.style.bottom = Math.floor(Math.random() * 120) + 50 + 'px'; 
-    coin.style.left = '100vw'; // Используем vw
+    coin.style.left = '100vw';
     coinsContainer.appendChild(coin);
 }
 
@@ -231,27 +297,58 @@ function handleKeyDown(event) {
 }
 
 function handleKeyUp(event) {
-    if (event.key === 'ArrowDown') {
-        endDucking();
-    }
+    if (event.key === 'ArrowDown') endDucking();
 }
 
-// --- МОБИЛЬНОЕ УПРАВЛЕНИЕ (Touch события) ---
+// --- МОБИЛЬНОЕ УПРАВЛЕНИЕ ---
 mobileJumpBtn.addEventListener('touchstart', (e) => {
-    e.preventDefault(); // Отменяем стандартное поведение Safari
+    e.preventDefault();
     if (!isGameRunning) startGame();
     else doJump();
 });
+mobileDuckBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startDucking(); });
+mobileDuckBtn.addEventListener('touchend', (e) => { e.preventDefault(); endDucking(); });
 
-mobileDuckBtn.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    startDucking();
+// --- ОБРАБОТЧИКИ МОДАЛОК ---
+dailyBtn.onclick = () => {
+    dailyModal.style.display = 'block';
+    claimDailyBtn.style.display = 'block';
+    dailyText.innerHTML = "Заходи каждый день, чтобы получать больше монет!";
+};
+skinsBtn.onclick = () => { renderSkins(); skinsModal.style.display = 'block'; };
+closeBtns.forEach(btn => btn.onclick = () => {
+    dailyModal.style.display = 'none';
+    skinsModal.style.display = 'none';
 });
 
-mobileDuckBtn.addEventListener('touchend', (e) => {
-    e.preventDefault();
-    endDucking();
-});
+claimDailyBtn.onclick = async () => {
+    const name = localStorage.getItem('dino_playername') || 'Игрок';
+    try {
+        const res = await fetch(`${API_BASE}/api/player/daily`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ name: name })
+        });
+        
+        if (!res.ok) throw new Error("Сервер вернул ошибку");
+        const data = await res.json();
+        
+        if (data.status === 'success') {
+            coins += data.reward;
+            coinsDisplay.textContent = `🪙 ${coins}`;
+            dailyText.innerHTML = `🎉 Вы получили <strong>${data.reward}</strong> монет!<br>Стрик: ${data.streak} дней подряд!`;
+            claimDailyBtn.style.display = 'none'; // Прячем кнопку
+            savePlayerProfile(name); 
+        } else if (data.status === 'already_claimed') {
+            dailyText.innerHTML = `Вы уже забрали награду сегодня!<br>Возвращайтесь завтра. (Стрик: ${data.streak})`;
+            claimDailyBtn.style.display = 'none'; // Прячем кнопку
+        } else if (data.status === 'error') {
+            dailyText.innerHTML = `<span style="color:red">Ошибка: ${data.message}</span>`;
+        }
+    } catch (e) { 
+        console.error(e);
+        dailyText.innerHTML = `<span style="color:red">Ошибка соединения с сервером. Проверь, запущен ли сервер.</span>`; 
+    }
+};
 
 // --- МАГАЗИН ---
 buyGlassesBtn.onclick = () => {
@@ -262,7 +359,6 @@ buyGlassesBtn.onclick = () => {
         savePlayerProfile(localStorage.getItem('dino_playername') || 'Игрок');
     }
 };
-
 buyShoesBtn.onclick = () => {
     if (coins >= shoesPrice && !hasShoes) {
         coins -= shoesPrice; hasShoes = true;
@@ -272,7 +368,6 @@ buyShoesBtn.onclick = () => {
         savePlayerProfile(localStorage.getItem('dino_playername') || 'Игрок');
     }
 };
-
 buyMagnetBtn.onclick = () => {
     if (coins >= magnetPrice && !hasMagnet) {
         coins -= magnetPrice; hasMagnet = true;
@@ -286,6 +381,7 @@ buyMagnetBtn.onclick = () => {
 function gameLoop() {
     if (!isGameRunning) return;
 
+    // Физика
     if (!isGrounded) {
         yVelocity -= gravity;
         yPosition += yVelocity;
@@ -299,45 +395,44 @@ function gameLoop() {
     }
     player.style.bottom = yPosition + 'px';
 
+    // Счет
     score += 1;
     const currentScore = Math.floor(score / 10);
     scoreDisplay.textContent = String(currentScore).padStart(5, '0');
 
+    // Биомы
     const tier = Math.floor(currentScore / 300);
     if (tier !== currentBiomeTier) {
         updateBiome(currentScore);
         currentBiomeTier = tier;
     }
 
+    // Рекорд
     if (currentScore > highScore) {
         highScore = currentScore;
         highScoreDisplay.textContent = `HI ${String(highScore).padStart(5, '0')}`;
     }
 
+    // Спавн объектов
     spawnObstacleTimer++; if (spawnObstacleTimer > 130) { spawnObstacle(); spawnObstacleTimer = 0; }
-    spawnCoinTimer++; if (spawnCoinTimer > 140) { spawnCoin(); spawnCoinTimer = 0; }
+    spawnCoinTimer++; if (spawnCoinTimer > 140) { spawnCoin(); spawnCoinTimer = 0; } // Монет стало меньше!
     spawnCloudTimer++; if (spawnCloudTimer > 300) { spawnCloud(); spawnCloudTimer = 0; }
 
-    // ВАЖНО: На мобилках скорость движения объектов привязана к ширине экрана (vw)
-    const speedModifier = window.innerWidth < 900 ? 1.5 : 4.5; // На телефоне объекты движутся чуть быстрее в пикселях
+    const speedModifier = window.innerWidth < 900 ? 1.5 : 4.5;
 
+    // Движение препятствий
     const obstacles = document.querySelectorAll('.obstacle');
     for (let i = obstacles.length - 1; i >= 0; i--) {
         const obs = obstacles[i];
         let currentLeft = parseFloat(obs.style.left);
-        
-        // Переводим vw в пиксели для расчета
         const pxLeft = (currentLeft / 100) * window.innerWidth - speedModifier;
         obs.style.left = (pxLeft / window.innerWidth) * 100 + 'vw';
         
-        // Проверка столкновения
-        if (checkCollision(player, obs)) {
-            endGame();
-            return;
-        }
+        if (checkCollision(player, obs)) { endGame(); return; }
         if (pxLeft < -100) obs.remove();
     }
 
+    // Движение монет
     const coinElements = document.querySelectorAll('.coin');
     coinElements.forEach(coin => {
         let currentLeft = parseFloat(coin.style.left);
@@ -352,7 +447,6 @@ function gameLoop() {
             const distX = playerRect.left - coinRect.left;
             const distY = playerRect.top - coinRect.top;
             if (distX < 250 && distX > 0 && Math.abs(distY) < 150) {
-                // Притяжение
                 coin.style.left = ((pxLeft + distX * 0.1) / window.innerWidth) * 100 + 'vw';
                 coin.style.bottom = (currentBottom + distY * 0.1) + 'px';
             }
@@ -369,6 +463,7 @@ function gameLoop() {
         }
     });
 
+    // Облака
     const clouds = document.querySelectorAll('.cloud');
     clouds.forEach(cloud => {
         let currentLeft = parseFloat(cloud.style.left);
@@ -380,11 +475,11 @@ function gameLoop() {
     animationFrameId = requestAnimationFrame(gameLoop);
 }
 
+// --- ХИТБОКС (Уменьшен на телефонах) ---
 function checkCollision(obj1, obj2) {
     const r1 = obj1.getBoundingClientRect();
     const r2 = obj2.getBoundingClientRect();
-    // Уменьшаем отступ на мобилках для более точного хитбокса
-    const padding = window.innerWidth < 900 ? 18 : 12;
+    const padding = window.innerWidth < 900 ? 18 : 12; 
     return !(
         r1.right - padding < r2.left + padding || 
         r1.left + padding > r2.right - padding ||
@@ -439,6 +534,7 @@ function endGame() {
     shopContainer.style.display = 'none'; gameMenu.style.display = 'flex';
 }
 
+// --- ИНИЦИАЛИЗАЦИЯ ---
 startBtn.addEventListener('click', startGame);
 window.addEventListener('keydown', handleKeyDown);
 window.addEventListener('keyup', handleKeyUp);
