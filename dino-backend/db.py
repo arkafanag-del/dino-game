@@ -17,7 +17,8 @@ def init_db():
                 score INTEGER NOT NULL
             )
         """)
-        # Таблица игроков (обновленная)
+        
+        # Таблица игроков
         conn.execute("""
             CREATE TABLE IF NOT EXISTS players (
                 name TEXT PRIMARY KEY,
@@ -29,4 +30,15 @@ def init_db():
                 streak INTEGER DEFAULT 0
             )
         """)
+        
+        # БЕЗОПАСНОЕ ОБНОВЛЕНИЕ (если таблица уже была создана ранее)
+        try:
+            conn.execute("ALTER TABLE players ADD COLUMN selected_skin TEXT DEFAULT 'default'")
+            conn.execute("ALTER TABLE players ADD COLUMN unlocked_skins TEXT DEFAULT 'default'")
+            conn.execute("ALTER TABLE players ADD COLUMN last_daily TEXT DEFAULT ''")
+            conn.execute("ALTER TABLE players ADD COLUMN streak INTEGER DEFAULT 0")
+        except sqlite3.OperationalError:
+            # Если колонки уже существуют, ничего не делаем
+            pass
+            
         conn.commit()
