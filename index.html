@@ -5,9 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Dino Ultimate RPG</title>
+    <title>Dino Ultimate RPG 4.0</title>
     
-    <!-- Пиксельные шрифты и моноширинный шрифт -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -16,11 +15,9 @@
 </head>
 <body>
 
-    <!-- Слой CRT-эффекта и виньетки -->
     <div class="crt-overlay"></div>
     <div class="vignette"></div>
 
-    <!-- Верхняя панель (HUD) -->
     <div class="top-panel">
         <div class="hud-left">
             <div id="coins-display">🪙 0</div>
@@ -32,63 +29,66 @@
         </div>
     </div>
 
-    <!-- Игровое поле -->
     <div class="game-container biome-desert" id="main-game">
         
-        <!-- Многослойный фон -->
         <div class="bg-layer bg-far"></div>
         <div class="bg-layer bg-near"></div>
-
-        <!-- Линия земли -->
         <div class="ground-line"></div>
 
-        <!-- Панель квестов -->
+        <!-- Комбо и Баффы -->
+        <div id="combo-display" style="display:none;">COMBO x2!</div>
+        <div id="active-buffs"></div>
+
+        <!-- Питомец (Дрон) -->
+        <div id="pet-drone" style="display:none;">🛸</div>
+
         <div class="quest-panel">
             <h4>📜 КВЕСТЫ</h4>
             <div id="quest-list"></div>
         </div>
 
-        <!-- Магазин улучшений -->
         <div class="shop-container">
             <button id="buy-glasses-btn" class="shop-btn">
                 <span class="icon">🕶️</span>
                 <span class="title">Очки</span>
-                <span class="desc">x2 доход</span>
                 <span class="price">🪙 15</span>
             </button>
             
             <button id="buy-shoes-btn" class="shop-btn">
                 <span class="icon">👟</span>
                 <span class="title">Кроссовки</span>
-                <span class="desc">Прыжок</span>
                 <span class="price">🪙 30</span>
             </button>
 
             <button id="buy-magnet-btn" class="shop-btn">
                 <span class="icon">🧲</span>
                 <span class="title">Магнит</span>
-                <span class="desc">Монеты</span>
                 <span class="price">🪙 50</span>
+            </button>
+
+            <button id="buy-pet-btn" class="shop-btn">
+                <span class="icon">🛸</span>
+                <span class="title">Дрон</span>
+                <span class="price">🪙 200</span>
             </button>
         </div>
 
-        <!-- Контейнеры для объектов -->
         <div id="clouds"></div>
         <div id="obstacles"></div>
         <div id="coins-container"></div>
+        <div id="powerups-container"></div>
         <div id="particles-container"></div>
 
-        <!-- Динозаврик -->
-        <div class="player"></div>
+        <div class="player" id="player-character"></div>
 
-        <!-- Главное меню -->
         <div id="game-menu">
-            <h1 id="menu-title">ДИНОЗАВРИК</h1>
+            <h1 id="menu-title">ДИНОЗАВРИК 4.0</h1>
             <p id="menu-text">Нажмите Пробел или кнопку, чтобы начать</p>
             
             <div class="menu-actions">
                 <button id="daily-btn" class="action-btn">🎁 БОНУС</button>
                 <button id="skins-btn" class="action-btn">🦖 СКИНЫ</button>
+                <button id="achievements-btn" class="action-btn">🏆 ДОСТИЖЕНИЯ</button>
                 <a href="leaderboard.html" class="action-btn">🏆 РЕКОРДЫ</a>
             </div>
 
@@ -104,7 +104,7 @@
         <!-- Модалки -->
         <div id="daily-modal" class="modal" style="display: none;">
             <h2>🎁 ЕЖЕДНЕВНЫЙ БОНУС</h2>
-            <p id="daily-text">Заходи каждый день, чтобы получать больше монет!</p>
+            <p id="daily-text"></p>
             <button id="claim-daily-btn" class="action-btn">ЗАБРАТЬ</button>
             <button class="close-modal-btn">ЗАКРЫТЬ</button>
         </div>
@@ -115,9 +115,13 @@
             <button class="close-modal-btn">ЗАКРЫТЬ</button>
         </div>
 
+        <div id="achievements-modal" class="modal" style="display: none;">
+            <h2>🏆 ДОСТИЖЕНИЯ</h2>
+            <div id="achievements-list" style="text-align: left; margin: 15px 0; font-size: 14px; line-height: 1.8;"></div>
+            <button class="close-modal-btn">ЗАКРЫТЬ</button>
+        </div>
     </div>
 
-    <!-- Мобильные кнопки -->
     <div class="mobile-controls">
         <button id="mobile-jump-btn">⬆️</button>
         <button id="mobile-duck-btn">⬇️</button>
