@@ -22,7 +22,7 @@ const startBtn = document.getElementById('start-btn');
 const leaderboardList = document.getElementById('leaderboard-list');
 const nameInput = document.getElementById('player-name-input');
 
-// Новые элементы (Бонусы и Скины)
+// Модалки и кнопки меню
 const dailyBtn = document.getElementById('daily-btn');
 const skinsBtn = document.getElementById('skins-btn');
 const dailyModal = document.getElementById('daily-modal');
@@ -36,7 +36,13 @@ const closeBtns = document.querySelectorAll('.close-modal-btn');
 const mobileJumpBtn = document.getElementById('mobile-jump-btn');
 const mobileDuckBtn = document.getElementById('mobile-duck-btn');
 
-const API_BASE = 'https://dino-game-backend-summer-tide-6155.fly.dev'; // Твой сервер
+// Создаем контейнер для погоды (чтобы не менять HTML)
+const weatherContainer = document.createElement('div');
+weatherContainer.id = 'weather-container';
+weatherContainer.style.cssText = 'position: absolute; inset: 0; pointer-events: none; z-index: 2; overflow: hidden;';
+gameContainer.appendChild(weatherContainer);
+
+const API_BASE = 'https://dino-game-backend-summer-tide-6155.fly.dev';
 
 // --- СОСТОЯНИЕ ИГРЫ ---
 let score = 0, isGameRunning = false, lastScore = 0, isDucking = false;
@@ -67,7 +73,7 @@ let quests = [
 let yPosition = 0, yVelocity = 0, isGrounded = true;
 const gravity = 0.5;
 let currentJumpForce = 11;
-let spawnObstacleTimer = 0, spawnCoinTimer = 0, spawnCloudTimer = 0;
+let spawnObstacleTimer = 0, spawnCoinTimer = 0, spawnCloudTimer = 0, spawnWeatherTimer = 0;
 
 let highScore = parseInt(localStorage.getItem('dino_highscore'), 10) || 0;
 highScoreDisplay.textContent = `HI ${String(highScore).padStart(5, '0')}`;
@@ -126,11 +132,8 @@ async function savePlayerProfile(name) {
         await fetch(`${API_BASE}/api/player/save`, {
             method: 'POST', headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ 
-                name: name, 
-                coins: coins, 
-                quests_done: 0, 
-                selected_skin: selectedSkin, 
-                unlocked_skins: unlockedSkins.join(',')
+                name: name, coins: coins, quests_done: 0, 
+                selected_skin: selectedSkin, unlocked_skins: unlockedSkins.join(',')
             })
         });
     } catch (e) { console.error('Ошибка сохранения профиля', e); }
@@ -138,16 +141,14 @@ async function savePlayerProfile(name) {
 
 // --- СКИНЫ ---
 function updatePlayerSkin() {
-    // Сбрасываем всё
     player.classList.remove('skin-raptor', 'skin-trike');
     player.style.backgroundImage = ""; 
+    player.style.filter = "drop-shadow(0 0 10px rgba(255, 255, 255, 0.5))";
 
     if (selectedSkin === 'default') {
         player.style.backgroundImage = "url('player.png')";
-        player.style.width = "50px";
-        player.style.height = "60px";
     } else if (selectedSkin === 'raptor') {
-        player.classList.add('skin-raptor'); // Тут работает наш CSS
+        player.classList.add('skin-raptor');
     } else if (selectedSkin === 'trike') {
         player.style.backgroundImage = "url('player.png')";
         player.style.filter = "hue-rotate(-90deg) drop-shadow(0 0 10px #ff2a2a)";
@@ -218,7 +219,38 @@ function updateBiome(scoreVal) {
     else gameContainer.classList.add('biome-volcano');
 }
 
-// --- СПАВН ---
+// --- ПОГОДА ---
+function spawnWeather() {
+    const p = document.createElement('div');
+    p.classList.add('weather-particle');
+    const currentScore = Math.floor(score / 10);
+    
+    if (currentScore < 300) { // Песчаная буря
+        p.classList.add('weather-sand');
+        p.style.left = '1000px';
+        p.style.top = Math.random() * 300 + 'px';
+        p.vx = -10; p.vy = Math.random() * 2 - 1;
+    } else if (currentScore < 600) { // Листья
+        p.classList.add('weather-leaf');
+        p.style.left = Math.random() * 900 + 'px';
+        p.style.top = '-20px';
+        p.vx = -4; p.vy = Math.random() * 2 + 1;
+    } else if (currentScore < 1000) { // Снег
+        p.classList.add('weather-snow');
+        p.style.left = Math.random() * 900 + 'px';
+        p.style.top = '-20px';
+        p.vx = -2; p.vy = Math.random() * 1.5 + 0.5;
+    } else { // Искры
+        p.classList.add('weather-spark');
+        p.style.left = Math.random() * 900 + 'px';
+        p.style.top = '350px';
+        p.vx = -2; p.vy = -(Math.random() * 2 + 1);
+    }
+    
+    weatherContainer.appendChild(p);
+}
+
+// --- СПАВН ОБЪЕКТОВ ---
 function spawnCloud() {
     const cloud = document.createElement('div');
     cloud.classList.add('cloud');
@@ -246,9 +278,8 @@ function spawnObstacle() {
 function spawnCoin() {
     const coin = document.createElement('div');
     coin.classList.add('coin');
-    // Появляются на высоте от 30 до 150 пикселей от земли
-    coin.style.bottom = Math.floor(Math.random() * 120) + 30 + 'px'; 
-    coin.style.left = gameContainer.offsetWidth + 'px'; 
+    coin.style.bottom = Math.floor(Math.random() * 120) + 50 + 'px'; 
+    coin.style.left = '100vw';
     coinsContainer.appendChild(coin);
 }
 
@@ -340,26 +371,19 @@ claimDailyBtn.onclick = async () => {
             method: 'POST', headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ name: name })
         });
-        
-        if (!res.ok) throw new Error("Сервер вернул ошибку");
         const data = await res.json();
         
         if (data.status === 'success') {
             coins += data.reward;
             coinsDisplay.textContent = `🪙 ${coins}`;
             dailyText.innerHTML = `🎉 Вы получили <strong>${data.reward}</strong> монет!<br>Стрик: ${data.streak} дней подряд!`;
-            claimDailyBtn.style.display = 'none'; // Прячем кнопку
+            claimDailyBtn.style.display = 'none';
             savePlayerProfile(name); 
         } else if (data.status === 'already_claimed') {
             dailyText.innerHTML = `Вы уже забрали награду сегодня!<br>Возвращайтесь завтра. (Стрик: ${data.streak})`;
-            claimDailyBtn.style.display = 'none'; // Прячем кнопку
-        } else if (data.status === 'error') {
-            dailyText.innerHTML = `<span style="color:red">Ошибка: ${data.message}</span>`;
+            claimDailyBtn.style.display = 'none';
         }
-    } catch (e) { 
-        console.error(e);
-        dailyText.innerHTML = `<span style="color:red">Ошибка соединения с сервером. Проверь, запущен ли сервер.</span>`; 
-    }
+    } catch (e) { dailyText.innerHTML = "Ошибка соединения с сервером"; }
 };
 
 // --- МАГАЗИН ---
@@ -425,12 +449,14 @@ function gameLoop() {
         highScoreDisplay.textContent = `HI ${String(highScore).padStart(5, '0')}`;
     }
 
-    // Спавн объектов
+    // Спавн объектов и погоды
     spawnObstacleTimer++; if (spawnObstacleTimer > 130) { spawnObstacle(); spawnObstacleTimer = 0; }
-    spawnCoinTimer++; if (spawnCoinTimer > 250) { spawnCoin(); spawnCoinTimer = 0; } // Монет стало меньше!
+    spawnCoinTimer++; if (spawnCoinTimer > 140) { spawnCoin(); spawnCoinTimer = 0; } 
     spawnCloudTimer++; if (spawnCloudTimer > 300) { spawnCloud(); spawnCloudTimer = 0; }
+    spawnWeatherTimer++; if (spawnWeatherTimer > 10) { spawnWeather(); spawnWeatherTimer = 0; }
 
     const speedModifier = window.innerWidth < 900 ? 1.5 : 4.5;
+    const weatherSpeed = window.innerWidth < 900 ? 0.6 : 1;
 
     // Движение препятствий
     const obstacles = document.querySelectorAll('.obstacle');
@@ -444,53 +470,38 @@ function gameLoop() {
         if (pxLeft < -100) obs.remove();
     }
 
-           // Движение монет
+    // Движение монет
     const coinElements = document.querySelectorAll('.coin');
     coinElements.forEach(coin => {
-        let coinLeft = parseFloat(coin.style.left) || gameContainer.offsetWidth;
-        let coinBottom = parseFloat(coin.style.bottom) || 30;
+        let currentLeft = parseFloat(coin.style.left);
+        let currentBottom = parseFloat(coin.style.bottom);
         
-        const speed = window.innerWidth < 900 ? 2.5 : 4; // Скорость полета влево
-        coinLeft -= speed;
+        const pxLeft = (currentLeft / 100) * window.innerWidth - (speedModifier - 0.5);
+        coin.style.left = (pxLeft / window.innerWidth) * 100 + 'vw';
 
-        // МАГНИТ
         if (hasMagnet) {
             const coinRect = coin.getBoundingClientRect();
             const playerRect = player.getBoundingClientRect();
-            
-            const px = playerRect.left + playerRect.width / 2;
-            const py = playerRect.top + playerRect.height / 2;
-            const cx = coinRect.left + coinRect.width / 2;
-            const cy = coinRect.top + coinRect.height / 2;
-            
-            const dx = px - cx;
-            const dy = py - cy;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            // Если монета в радиусе 200 пикселей — притягиваем
-            if (distance < 200) {
-                coinLeft += dx * 0.2;   // Тянем влево/вправо
-                coinBottom -= dy * 0.2; // Тянем вверх/вниз (минус, т.к. bottom растет вверх)
+            const distX = playerRect.left - coinRect.left;
+            const distY = playerRect.top - coinRect.top;
+            if (distX < 250 && distX > 0 && Math.abs(distY) < 150) {
+                coin.style.left = ((pxLeft + distX * 0.1) / window.innerWidth) * 100 + 'vw';
+                coin.style.bottom = (currentBottom + distY * 0.1) + 'px';
             }
         }
 
-        // Применяем новые координаты
-        coin.style.left = coinLeft + 'px';
-        coin.style.bottom = coinBottom + 'px';
-
-        // Проверка сбора монеты
         if (checkCollision(player, coin)) {
             coin.remove();
             coins += hasGlasses ? 2 : 1;
             coinsDisplay.textContent = `🪙 ${coins}`;
             runCoins++;
             updateQuest('coin');
-        } else if (coinLeft < -50) {
+        } else if (pxLeft < -50) {
             coin.remove();
         }
     });
 
-    // Облака
+    // Движение облаков
     const clouds = document.querySelectorAll('.cloud');
     clouds.forEach(cloud => {
         let currentLeft = parseFloat(cloud.style.left);
@@ -499,10 +510,30 @@ function gameLoop() {
         if (pxLeft < -100) cloud.remove();
     });
 
+    // Движение погоды (ЧАСТИЦЫ)
+    const weatherParticles = document.querySelectorAll('.weather-particle');
+    weatherParticles.forEach(p => {
+        let left = parseFloat(p.style.left) || 0;
+        let top = parseFloat(p.style.top) || 0;
+        
+        // Если у частицы нет скорости, задаем стандартную
+        if (!p.vx) p.vx = -5;
+        if (!p.vy) p.vy = 2;
+        
+        left += p.vx * weatherSpeed;
+        top += p.vy * weatherSpeed;
+        
+        p.style.left = left + 'px';
+        p.style.top = top + 'px';
+        
+        // Удаляем, если улетела за экран
+        if (left < -50 || top > 450 || top < -50) p.remove();
+    });
+
     animationFrameId = requestAnimationFrame(gameLoop);
 }
 
-// --- ХИТБОКС (Уменьшен на телефонах) ---
+// --- ХИТБОКС ---
 function checkCollision(obj1, obj2) {
     const r1 = obj1.getBoundingClientRect();
     const r2 = obj2.getBoundingClientRect();
@@ -525,7 +556,7 @@ function startGame() {
     isGameRunning = true; isDucking = false;
     gameMenu.style.display = 'none'; shopContainer.style.display = 'flex';
 
-    obstaclesContainer.innerHTML = ''; coinsContainer.innerHTML = ''; cloudsContainer.innerHTML = ''; particlesContainer.innerHTML = '';
+    obstaclesContainer.innerHTML = ''; coinsContainer.innerHTML = ''; cloudsContainer.innerHTML = ''; particlesContainer.innerHTML = ''; weatherContainer.innerHTML = '';
     score = 0; yPosition = 0; yVelocity = 0; isGrounded = true;
     runJumps = 0; runCoins = 0; 
     quests.forEach(q => { q.current = 0; q.done = false; });
@@ -561,6 +592,31 @@ function endGame() {
     shopContainer.style.display = 'none'; gameMenu.style.display = 'flex';
 }
 
+// --- СЕКРЕТНЫЙ АДМИН-РЕЖИМ ---
+function activateAdminMode() {
+    coins += 99999;
+    coinsDisplay.textContent = `🪙 ${coins}`;
+    const name = localStorage.getItem('dino_playername') || 'Игрок';
+    savePlayerProfile(name);
+    alert('🛠️ АДМИН-РЕЖИМ АКТИВИРОВАН!\nНачислено 99 999 монет.\nВсе скины и апгрейды теперь доступны!');
+}
+
+window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.code === 'KeyA') {
+        e.preventDefault();
+        activateAdminMode();
+    }
+});
+
+let titleClickCount = 0;
+let titleClickTimer;
+menuTitle.addEventListener('click', () => {
+    titleClickCount++;
+    clearTimeout(titleClickTimer);
+    titleClickTimer = setTimeout(() => { titleClickCount = 0; }, 1000); 
+    if (titleClickCount >= 5) { activateAdminMode(); titleClickCount = 0; }
+});
+
 // --- ИНИЦИАЛИЗАЦИЯ ---
 startBtn.addEventListener('click', startGame);
 window.addEventListener('keydown', handleKeyDown);
@@ -574,39 +630,3 @@ const savedName = localStorage.getItem('dino_playername');
 if (savedName) loadPlayerProfile(savedName);
 renderQuests();
 player.classList.remove('running');
-
-// --- СЕКРЕТНЫЙ АДМИН-РЕЖИМ ---
-function activateAdminMode() {
-    coins += 99999;
-    coinsDisplay.textContent = `🪙 ${coins}`;
-    const name = localStorage.getItem('dino_playername') || 'Игрок';
-    savePlayerProfile(name);
-    
-    // Звуковое/визуальное подтверждение
-    alert('🛠️ АДМИН-РЕЖИМ АКТИВИРОВАН!\nНачислено 99 999 монет.\nВсе скины и апгрейды теперь доступны!');
-}
-
-// 1. Чит-код для ПК (Ctrl + Shift + A)
-window.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.shiftKey && e.code === 'KeyA') {
-        e.preventDefault();
-        activateAdminMode();
-    }
-});
-
-// 2. Чит-код для мобилок (Клик по заголовку 5 раз)
-let titleClickCount = 0;
-let titleClickTimer;
-
-menuTitle.addEventListener('click', () => {
-    titleClickCount++;
-    clearTimeout(titleClickTimer);
-    
-    // Если между кликами проходит больше 1 секунды, счетчик сбрасывается
-    titleClickTimer = setTimeout(() => { titleClickCount = 0; }, 1000); 
-
-    if (titleClickCount >= 5) {
-        activateAdminMode();
-        titleClickCount = 0; // Сброс после активации
-    }
-});
