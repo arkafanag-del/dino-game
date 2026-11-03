@@ -17,14 +17,12 @@ body {
     touch-action: none;
 }
 
-/* Эффект сканирующих линий (CRT) */
 .crt-overlay {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background: repeating-linear-gradient(0deg, rgba(0,0,0,0.15), rgba(0,0,0,0.15) 1px, transparent 1px, transparent 2px);
     pointer-events: none; z-index: 9999;
 }
 
-/* --- ВЕРХНЯЯ ПАНЕЛЬ --- */
 .top-panel {
     width: 100%; max-width: 900px; display: flex; justify-content: space-between;
     padding: 10px 15px; font-family: 'Press Start 2P', cursive; font-size: 14px; z-index: 10;
@@ -34,7 +32,6 @@ body {
 #high-score { color: #555; }
 #score { color: #00ff88; text-shadow: 0 0 10px #00ff88; }
 
-/* --- ИГРОВОЕ ПОЛЕ --- */
 .game-container {
     position: relative; 
     width: 100%; max-width: 900px; 
@@ -50,7 +47,7 @@ body {
     transition: background-color 1s, box-shadow 1s;
 }
 
-/* --- БИОМЫ (ЦВЕТА) --- */
+/* --- БИОМЫ --- */
 .biome-desert { background: linear-gradient(to bottom, #1a0b2e 0%, #2d1b4e 50%, #0d0518 100%); }
 .biome-jungle { background: linear-gradient(to bottom, #051a11 0%, #0d3b22 50%, #020a06 100%); border-color: #00ff88; }
 .biome-jungle .ground-line { background-color: #00ff88; box-shadow: 0 0 15px #00ff88; }
@@ -59,26 +56,16 @@ body {
 .biome-volcano { background: linear-gradient(to bottom, #2e0505 0%, #54100f 50%, #120202 100%); border-color: #ff2a2a; box-shadow: 0 0 20px rgba(255, 42, 42, 0.3); }
 .biome-volcano .ground-line { background-color: #ff2a2a; box-shadow: 0 0 15px #ff2a2a; }
 
-/* --- ДЕТАЛИ ФОНА (ПАРАЛЛАКС) --- */
 .bg-layer {
-    position: absolute;
-    bottom: 0; left: 0; width: 200%; height: 100%;
-    z-index: 1;
-    background-repeat: repeat-x;
-    background-position: bottom;
-    animation: scrollBg 15s linear infinite;
-    opacity: 0.6; 
-    pointer-events: none;
+    position: absolute; bottom: 0; left: 0; width: 200%; height: 100%;
+    z-index: 1; background-repeat: repeat-x; background-position: bottom;
+    animation: scrollBg 15s linear infinite; opacity: 0.6; pointer-events: none;
 }
-@keyframes scrollBg {
-    from { transform: translateX(0); }
-    to { transform: translateX(-50%); }
-}
+@keyframes scrollBg { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 .biome-desert .bg-layer {
     background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100"><path d="M0 100 Q25 50 50 100 T100 100 T150 100 T200 100 Z" fill="%232d1b4e"/><path d="M0 100 Q30 70 60 100 T120 100 T180 100 T240 100 Z" fill="%231a0b2e"/></svg>');
     background-size: 400px 150px;
 }
-/* Джунгли (Мягкие холмы и кусты) */
 .biome-jungle .bg-layer {
     background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100"><path d="M0,100 Q20,60 40,90 Q70,40 110,90 Q140,50 170,85 Q190,70 200,100 Z" fill="%230d3b22"/><path d="M0,100 Q30,70 60,95 Q90,50 130,95 Q160,65 200,100 Z" fill="%23051a11"/><circle cx="30" cy="70" r="20" fill="%230d3b22"/><circle cx="150" cy="60" r="30" fill="%23051a11"/></svg>');
     background-size: 350px 150px;
@@ -92,21 +79,17 @@ body {
     background-size: 400px 150px;
 }
 
-/* --- ПАНЕЛЬ КВЕСТОВ --- */
 .quest-panel {
-    position: absolute; top: 10px; left: 10px;
-    background: rgba(0, 0, 0, 0.6); border: 1px solid #00ff88;
-    border-radius: 5px; padding: 8px; width: 160px; z-index: 50;
-    font-size: 11px; pointer-events: none; backdrop-filter: blur(5px);
+    position: absolute; top: 10px; left: 10px; background: rgba(0, 0, 0, 0.6);
+    border: 1px solid #00ff88; border-radius: 5px; padding: 8px; width: 160px;
+    z-index: 50; font-size: 11px; pointer-events: none; backdrop-filter: blur(5px);
 }
 .quest-panel h4 { margin: 0 0 5px 0; color: #00ff88; font-size: 10px; text-align: center; }
 .quest-item { margin-bottom: 4px; color: #ccc; }
 .quest-item.done { color: #00ff88; text-decoration: line-through; }
 
-/* --- МАГАЗИН --- */
 .shop-container {
-    position: absolute; top: 10px; right: 10px;
-    display: flex; gap: 8px; z-index: 50;
+    position: absolute; top: 10px; right: 10px; display: flex; gap: 8px; z-index: 50;
 }
 .shop-btn {
     display: flex; flex-direction: column; align-items: center;
@@ -121,98 +104,109 @@ body {
 .shop-btn .desc { font-size: 9px; color: #aaa; }
 .shop-btn .price { font-size: 11px; color: #ffd700; }
 
-/* --- ИГРОК --- */
 .player {
     position: absolute; bottom: 0; left: 50px; width: 50px; height: 60px;
     background-image: url('player.png'); background-size: contain;
     background-repeat: no-repeat; background-position: bottom;
     z-index: 10; 
-    /* Делаем динозавра ярче и добавляем свечение */
-    filter: brightness(1.5) drop-shadow(0 0 8px #ffffff);
+    filter: brightness(2.5) drop-shadow(0 0 15px #ffffff); 
     transition: height 0.1s, width 0.1s;
 }
 .player.running { animation: run 0.15s infinite alternate ease-in-out; }
 @keyframes run { from { transform: translateY(0); } to { transform: translateY(-3px); } }
 .player.ducking { height: 30px !important; width: 65px !important; }
 
-/* --- СКИН: РАПТОР --- */
 .player.skin-raptor {
     background-image: url('raptor.png') !important;
-    background-size: contain !important; 
-    background-repeat: no-repeat;
-    background-position: bottom center; 
-    animation: none; 
-    filter: drop-shadow(0 0 10px #00ff88);
-    width: 110px; 
-    height: 80px;
+    background-size: contain !important; background-repeat: no-repeat; background-position: bottom center; 
+    animation: none; filter: brightness(2.5) drop-shadow(0 0 15px #00ff88);
+    width: 110px; height: 80px;
 }
-.player.skin-raptor.ducking {
-    height: 50px !important; 
-    width: 130px !important;
+.player.skin-raptor.ducking { height: 50px !important; width: 130px !important; }
+
+/* ========================================= */
+/* --- ПРЕПЯТСТВИЯ ДЛЯ КАЖДОГО БИОМА --- */
+/* ========================================= */
+.obstacle { 
+    position: absolute; 
+    bottom: 0; 
+    background-size: contain; 
+    background-position: bottom center; 
+    background-repeat: no-repeat;
+    z-index: 5; 
+    will-change: left; 
+    /* Легкое свечение по умолчанию */
+    filter: drop-shadow(0 0 10px #fff); 
 }
 
-/* --- ПРЕПЯТСТВИЯ --- */
-.obstacle { 
-    position: absolute; bottom: 0; 
-    background-image: url('obstacle.png'); background-size: 100% 100%; 
-    z-index: 5; 
-    /* Делаем кактусы ярче с красным свечением */
-    filter: brightness(1.2) drop-shadow(0 0 8px #ff2a2a); 
+/* 1. ПУСТЫНЯ (Кактус) */
+.biome-desert .obstacle {
+    background-image: url('obstacle.png');
+    filter: brightness(1.5) drop-shadow(0 0 10px #ff2a2a);
 }
+
+/* 2. ДЖУНГЛИ (Ядовитые неоновые лианы/кусты) */
+.biome-jungle .obstacle {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="70" r="30" fill="%2300ff88"/><circle cx="30" cy="80" r="20" fill="%2300cc66"/><circle cx="70" cy="80" r="20" fill="%2300cc66"/><path d="M50 40 L50 10" stroke="%2300ff88" stroke-width="6"/></svg>');
+    filter: brightness(1.5) drop-shadow(0 0 10px #00ff88);
+}
+
+/* 3. ЛЕДНИКИ (Острые ледяные шипы) */
+.biome-ice .obstacle {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,10 80,100 20,100" fill="%2300d4ff"/><polygon points="50,10 90,100 50,100" fill="%2300b4ff"/><polygon points="30,40 50,100 10,100" fill="%23008cff"/></svg>');
+    filter: brightness(1.5) drop-shadow(0 0 10px #00d4ff);
+}
+
+/* 4. ВУЛКАН (Обсидиановые скалы с лавой) */
+.biome-volcano .obstacle {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M10,100 L20,40 L50,10 L80,40 L90,100 Z" fill="%23ff2a2a"/><path d="M30,100 L40,50 L60,70 L70,100 Z" fill="%23ff8c00"/></svg>');
+    filter: brightness(1.2) drop-shadow(0 0 15px #ff8c00);
+}
+
+/* --- ЛЕТАЮЩИЙ ВРАГ (Птица для всех биомов) --- */
 .obstacle.flying { 
     bottom: 70px; width: 55px; height: 40px; 
-    background-image: url('bird.png'); background-size: contain; background-color: transparent; 
-    filter: drop-shadow(0 0 8px #ff2a2a);
+    background-image: url('bird.png') !important; /* Принудительно птица */
+    background-size: contain; background-color: transparent; 
+    filter: drop-shadow(0 0 10px #ffffff) !important; /* Белое свечение для птицы */
     animation: fly 0.4s infinite alternate ease-in-out; 
+    will-change: transform, left;
 }
-@keyframes fly { 0% { transform: translateY(0); } 100% { transform: translateY(-10px); } }
+@keyframes fly { 0% { transform: translateY(0) rotate(-5deg); } 100% { transform: translateY(-10px) rotate(5deg); } }
 
-/* --- МОНЕТЫ И ОБЛАКА --- */
 .coin { position: absolute; width: 22px; height: 22px; background-color: #ffd700; border-radius: 50%; box-shadow: 0 0 10px #ffd700; border: 2px solid #fff; z-index: 5; animation: spin 0.8s linear infinite; }
 @keyframes spin { 0% { transform: rotateY(0deg); } 100% { transform: rotateY(360deg); } }
-.cloud { position: absolute; background-color: rgba(255, 255, 255, 0.05); border-radius: 50px; z-index: 1; }
 
-/* --- ЭФФЕКТЫ ПОГОДЫ --- */
+/* --- ОБЛАКА --- */
+.cloud { position: absolute; background-color: rgba(255, 255, 255, 0.08); border-radius: 50px; z-index: 1; }
+.cloud::before, .cloud::after { content: ''; position: absolute; background-color: rgba(255, 255, 255, 0.08); border-radius: 50%; }
+.cloud::before { width: 50%; height: 150%; top: -50%; left: 15%; }
+.cloud::after { width: 60%; height: 120%; top: -30%; right: 15%; }
+
+/* --- ПОГОДА --- */
 .weather-particle { position: absolute; pointer-events: none; z-index: 2; }
 .weather-sand { width: 6px; height: 2px; background: #ffd700; border-radius: 50%; opacity: 0.4; }
-
-/* Красивые падающие листья для джунглей */
-.weather-leaf {
-    width: 6px; 
-    height: 10px;
-    background: #00ff88;
-    border-radius: 50% 0 50% 0; /* Форма листика */
-    box-shadow: 0 0 5px #00ff88;
-    opacity: 0.8;
-    animation: leafSpin 2s linear infinite;
-}
-@keyframes leafSpin {
-    0% { transform: rotate(0deg) translateY(0); }
-    100% { transform: rotate(360deg) translateY(10px); }
-}
-
+.weather-leaf { width: 6px; height: 10px; background: #00ff88; border-radius: 50% 0 50% 0; box-shadow: 0 0 5px #00ff88; opacity: 0.8; animation: leafSpin 2s linear infinite; }
+@keyframes leafSpin { 0% { transform: rotate(0deg) translateY(0); } 100% { transform: rotate(360deg) translateY(10px); } }
 .weather-snow { width: 5px; height: 5px; background: #ffffff; border-radius: 50%; box-shadow: 0 0 8px #fff; opacity: 0.9; }
 .weather-spark { width: 4px; height: 4px; background: #ff2a2a; border-radius: 50%; box-shadow: 0 0 10px #ff2a2a; opacity: 0.8; }
 
-/* --- ЧАСТИЦЫ ПЫЛИ (ПРЫЖОК) --- */
 .particle { position: absolute; background-color: #00ff88; border-radius: 50%; pointer-events: none; z-index: 9; animation: fadeOut 0.5s ease-out forwards; }
 @keyframes fadeOut { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: translateY(-20px); } }
 
 /* --- МЕНЮ --- */
 #game-menu {
-    position: absolute; inset: 0; background: rgba(5, 5, 10, 0.85);
-    backdrop-filter: blur(8px); display: flex; flex-direction: column;
-    align-items: center; justify-content: center; z-index: 100; padding: 20px;
+    position: absolute; inset: 0; background: rgba(5, 5, 10, 0.85); backdrop-filter: blur(8px);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; padding: 20px;
 }
 #game-menu h1 { margin: 0 0 10px 0; font-size: 24px; text-shadow: 0 0 10px #00ff88; text-align: center; font-family: 'Press Start 2P', cursive; cursor: pointer; user-select: none; }
 #menu-text { margin: 0 0 15px 0; font-size: 14px; color: #aaa; text-align: center; }
 
 .menu-actions { display: flex; gap: 10px; margin-bottom: 20px; }
 .action-btn {
-    padding: 10px 15px; font-family: 'Share Tech Mono', monospace;
-    background: rgba(0, 0, 0, 0.5); color: #00ff88; border: 1px solid #00ff88;
-    border-radius: 5px; cursor: pointer; font-weight: bold; transition: all 0.2s;
-    text-decoration: none; text-align: center; font-size: 14px;
+    padding: 10px 15px; font-family: 'Share Tech Mono', monospace; background: rgba(0, 0, 0, 0.5);
+    color: #00ff88; border: 1px solid #00ff88; border-radius: 5px; cursor: pointer;
+    font-weight: bold; transition: all 0.2s; text-decoration: none; text-align: center; font-size: 14px;
 }
 .action-btn:hover, .action-btn:active { background: rgba(0, 255, 136, 0.2); box-shadow: 0 0 10px #00ff88; }
 
@@ -224,13 +218,11 @@ body {
 #start-btn { padding: 15px 40px; font-size: 14px; font-family: 'Press Start 2P', cursive; background: transparent; color: #00ff88; border: 2px solid #00ff88; cursor: pointer; box-shadow: 0 0 15px rgba(0,255,136,0.2); border-radius: 5px; }
 #start-btn:active { background: #00ff88; color: #000; }
 
-/* --- МОДАЛЬНЫЕ ОКНА --- */
 .modal {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    background: rgba(10, 10, 15, 0.95); border: 2px solid #ffd700;
-    border-radius: 10px; padding: 20px; width: 80%; max-width: 400px;
-    z-index: 200; text-align: center; box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
-    animation: fadeIn 0.3s ease-out;
+    background: rgba(10, 10, 15, 0.95); border: 2px solid #ffd700; border-radius: 10px;
+    padding: 20px; width: 80%; max-width: 400px; z-index: 200; text-align: center;
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.3); animation: fadeIn 0.3s ease-out;
 }
 .modal h2 { color: #ffd700; font-size: 16px; margin-top: 0; font-family: 'Press Start 2P', cursive;}
 .modal p { font-size: 14px; color: #ccc; }
@@ -244,24 +236,14 @@ body {
 .skin-icon { font-size: 30px; margin-bottom: 5px; }
 .skin-name { font-size: 10px; text-align: center; }
 
-/* --- МОБИЛЬНЫЕ КНОПКИ --- */
-.mobile-controls {
-    display: none; 
-    width: 100%; max-width: 900px;
-    justify-content: space-between; 
-    padding: 15px 20px;
-    margin-top: 10px; 
-}
+.mobile-controls { display: none; width: 100%; max-width: 900px; justify-content: space-between; padding: 15px 20px; margin-top: 10px; }
 .mobile-controls button {
-    width: 80px; height: 80px; border-radius: 50%;
-    background: rgba(0, 0, 0, 0.5); border: 2px solid #00ff88;
-    color: #00ff88; font-size: 32px; backdrop-filter: blur(5px);
-    box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
-    display: flex; align-items: center; justify-content: center;
+    width: 80px; height: 80px; border-radius: 50%; background: rgba(0, 0, 0, 0.5);
+    border: 2px solid #00ff88; color: #00ff88; font-size: 32px; backdrop-filter: blur(5px);
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.3); display: flex; align-items: center; justify-content: center;
 }
 .mobile-controls button:active { background: rgba(0, 255, 136, 0.3); transform: scale(0.95); }
 
-/* --- АДАПТИВНОСТЬ --- */
 @media (max-width: 900px) {
     .top-panel { font-size: 10px; padding: 10px; }
     .game-container { height: 45vh; border-width: 2px; border-radius: 0; }
@@ -275,7 +257,6 @@ body {
     .shop-btn .desc { display: none; } 
     .shop-btn .price { font-size: 10px; }
 
-    /* Показываем мобильные кнопки под экраном */
     .mobile-controls { display: flex; padding: 10px; }
     .mobile-controls button { width: 70px; height: 70px; font-size: 28px; }
     

@@ -22,7 +22,6 @@ const startBtn = document.getElementById('start-btn');
 const leaderboardList = document.getElementById('leaderboard-list');
 const nameInput = document.getElementById('player-name-input');
 
-// Модалки и кнопки меню
 const dailyBtn = document.getElementById('daily-btn');
 const skinsBtn = document.getElementById('skins-btn');
 const dailyModal = document.getElementById('daily-modal');
@@ -32,11 +31,9 @@ const claimDailyBtn = document.getElementById('claim-daily-btn');
 const skinsGrid = document.getElementById('skins-grid');
 const closeBtns = document.querySelectorAll('.close-modal-btn');
 
-// Мобильные кнопки
 const mobileJumpBtn = document.getElementById('mobile-jump-btn');
 const mobileDuckBtn = document.getElementById('mobile-duck-btn');
 
-// Создаем контейнер для погоды (чтобы не менять HTML)
 const weatherContainer = document.createElement('div');
 weatherContainer.id = 'weather-container';
 weatherContainer.style.cssText = 'position: absolute; inset: 0; pointer-events: none; z-index: 2; overflow: hidden;';
@@ -48,12 +45,10 @@ const API_BASE = 'https://dino-game-backend-summer-tide-6155.fly.dev';
 let score = 0, isGameRunning = false, lastScore = 0, isDucking = false;
 let animationFrameId, currentBiomeTier = -1;
 
-// Экономика
 let coins = 0;
 let hasGlasses = false, hasShoes = false, hasMagnet = false;
 const glassesPrice = 15, shoesPrice = 30, magnetPrice = 50;
 
-// Скины
 let selectedSkin = 'default';
 let unlockedSkins = ['default'];
 const skinList = [
@@ -62,14 +57,12 @@ const skinList = [
     { id: 'trike', icon: '🦏', name: 'Трицератопс', price: 100 }
 ];
 
-// Квесты
 let runJumps = 0, runCoins = 0;
 let quests = [
     { id: 'jump', text: 'Прыгни 5 раз', target: 5, current: 0, reward: 5, done: false },
     { id: 'coin', text: 'Собери 10 монет', target: 10, current: 0, reward: 10, done: false }
 ];
 
-// Физика
 let yPosition = 0, yVelocity = 0, isGrounded = true;
 const gravity = 0.5;
 let currentJumpForce = 11;
@@ -78,12 +71,11 @@ let spawnObstacleTimer = 0, spawnCoinTimer = 0, spawnCloudTimer = 0, spawnWeathe
 let highScore = parseInt(localStorage.getItem('dino_highscore'), 10) || 0;
 highScoreDisplay.textContent = `HI ${String(highScore).padStart(5, '0')}`;
 
-// --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
 function escapeHtml(s) { 
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); 
 }
 
-// --- БЭКЕНД: РЕКОРДЫ ---
+// --- БЭКЕНД ---
 async function loadOnlineLeaderboard() {
     try {
         const res = await fetch(`${API_BASE}/api/leaderboard`);
@@ -108,7 +100,6 @@ async function sendScoreToBackend(playerName, playerScore) {
     } catch (e) { console.error(e); }
 }
 
-// --- БЭКЕНД: ПРОФИЛЬ ---
 async function loadPlayerProfile(name) {
     try {
         const res = await fetch(`${API_BASE}/api/player/load`, {
@@ -116,10 +107,8 @@ async function loadPlayerProfile(name) {
             body: JSON.stringify({ name: name })
         });
         const data = await res.json();
-        
         coins = data.coins;
         coinsDisplay.textContent = `🪙 ${coins}`;
-        
         selectedSkin = data.selected_skin || 'default';
         unlockedSkins = data.unlocked_skins ? data.unlocked_skins.split(',') : ['default'];
         updatePlayerSkin();
@@ -143,7 +132,7 @@ async function savePlayerProfile(name) {
 function updatePlayerSkin() {
     player.classList.remove('skin-raptor', 'skin-trike');
     player.style.backgroundImage = ""; 
-    player.style.filter = "drop-shadow(0 0 10px rgba(255, 255, 255, 0.5))";
+    player.style.filter = "brightness(2.5) drop-shadow(0 0 15px #ffffff)";
 
     if (selectedSkin === 'default') {
         player.style.backgroundImage = "url('player.png')";
@@ -151,7 +140,7 @@ function updatePlayerSkin() {
         player.classList.add('skin-raptor');
     } else if (selectedSkin === 'trike') {
         player.style.backgroundImage = "url('player.png')";
-        player.style.filter = "hue-rotate(-90deg) drop-shadow(0 0 10px #ff2a2a)";
+        player.style.filter = "brightness(2.5) hue-rotate(-90deg) drop-shadow(0 0 15px #ff2a2a)";
     }
 }
 
@@ -161,7 +150,6 @@ function renderSkins() {
         const isUnlocked = unlockedSkins.includes(skin.id);
         const card = document.createElement('div');
         card.className = `skin-card ${selectedSkin === skin.id ? 'active' : ''}`;
-        
         let priceHtml = isUnlocked ? '' : `<span style="font-size:10px; color:#ffd700">🔒 ${skin.price}</span>`;
         card.innerHTML = `<span class="skin-icon">${skin.icon}</span><span class="skin-name">${skin.name}</span>${priceHtml}`;
         
@@ -185,7 +173,6 @@ function renderSkins() {
     });
 }
 
-// --- КВЕСТЫ ---
 function renderQuests() {
     questListUI.innerHTML = '';
     quests.forEach(q => {
@@ -210,7 +197,6 @@ function updateQuest(id) {
     }
 }
 
-// --- БИОМЫ ---
 function updateBiome(scoreVal) {
     gameContainer.className = 'game-container'; 
     if (scoreVal < 300) gameContainer.classList.add('biome-desert');
@@ -219,67 +205,72 @@ function updateBiome(scoreVal) {
     else gameContainer.classList.add('biome-volcano');
 }
 
-// --- ПОГОДА ---
 function spawnWeather() {
     const p = document.createElement('div');
     p.classList.add('weather-particle');
     const currentScore = Math.floor(score / 10);
     
-    if (currentScore < 300) { // Песчаная буря
+    if (currentScore < 300) { 
         p.classList.add('weather-sand');
-        p.style.left = '1000px';
-        p.style.top = Math.random() * 300 + 'px';
+        p.style.left = gameContainer.offsetWidth + 'px';
+        p.style.top = Math.random() * gameContainer.offsetHeight + 'px';
         p.vx = -10; p.vy = Math.random() * 2 - 1;
-    } else if (currentScore < 600) { // Листья
+    } else if (currentScore < 600) { 
         p.classList.add('weather-leaf');
-        p.style.left = Math.random() * 900 + 'px';
+        p.style.left = Math.random() * gameContainer.offsetWidth + 'px';
         p.style.top = '-20px';
-        p.vx = -4; p.vy = Math.random() * 2 + 1;
-    } else if (currentScore < 1000) { // Снег
+        p.vx = -2; p.vy = Math.random() * 1 + 1;
+    } else if (currentScore < 1000) { 
         p.classList.add('weather-snow');
-        p.style.left = Math.random() * 900 + 'px';
+        p.style.left = Math.random() * gameContainer.offsetWidth + 'px';
         p.style.top = '-20px';
         p.vx = -2; p.vy = Math.random() * 1.5 + 0.5;
-    } else { // Искры
+    } else { 
         p.classList.add('weather-spark');
-        p.style.left = Math.random() * 900 + 'px';
-        p.style.top = '350px';
+        p.style.left = Math.random() * gameContainer.offsetWidth + 'px';
+        p.style.top = gameContainer.offsetHeight + 'px';
         p.vx = -2; p.vy = -(Math.random() * 2 + 1);
     }
-    
     weatherContainer.appendChild(p);
 }
 
-// --- СПАВН ОБЪЕКТОВ ---
 function spawnCloud() {
     const cloud = document.createElement('div');
     cloud.classList.add('cloud');
-    cloud.style.width = Math.random() * 40 + 30 + 'px';
+    cloud.style.width = Math.random() * 40 + 40 + 'px'; // Сделали облака чуть шире
     cloud.style.height = (parseFloat(cloud.style.width) / 3) + 'px';
     cloud.style.top = Math.random() * 100 + 20 + 'px';
-    cloud.style.left = '100vw';
+    cloud.style.left = gameContainer.offsetWidth + 'px';
     cloudsContainer.appendChild(cloud);
 }
 
 function spawnObstacle() {
+    const existingObstacles = document.querySelectorAll('.obstacle');
+    for (let obs of existingObstacles) {
+        // УМЕНЬШИЛИ ДИСТАНЦИЮ с 350 до 250 пикселей
+        if (parseFloat(obs.style.left) > gameContainer.offsetWidth - 250) {
+            return; 
+        }
+    }
+
     const obstacle = document.createElement('div');
     obstacle.classList.add('obstacle');
-    const isFlying = Math.random() < 0.3; 
+    const isFlying = Math.random() < 0.2; 
     if (isFlying) {
         obstacle.classList.add('flying');
     } else {
-        obstacle.style.height = Math.floor(Math.random() * 25) + 40 + 'px';
-        obstacle.style.width = Math.random() > 0.6 ? '45px' : '25px';
+        obstacle.style.height = Math.floor(Math.random() * 30) + 50 + 'px';
+        obstacle.style.width = Math.random() > 0.6 ? '55px' : '35px';
     }
-    obstacle.style.left = '100vw';
+    obstacle.style.left = gameContainer.offsetWidth + 'px';
     obstaclesContainer.appendChild(obstacle);
 }
 
 function spawnCoin() {
     const coin = document.createElement('div');
     coin.classList.add('coin');
-    coin.style.bottom = Math.floor(Math.random() * 120) + 50 + 'px'; 
-    coin.style.left = '100vw';
+    coin.style.bottom = Math.floor(Math.random() * 110) + 40 + 'px'; 
+    coin.style.left = gameContainer.offsetWidth + 'px'; 
     coinsContainer.appendChild(coin);
 }
 
@@ -297,17 +288,14 @@ function createParticles(x, y) {
     }
 }
 
-// --- УПРАВЛЕНИЕ ---
 function doJump() {
     if (isGrounded && isGameRunning && !isDucking) {
         yVelocity = currentJumpForce;
         isGrounded = false;
         player.classList.remove('running');
-        
         const rect = player.getBoundingClientRect();
         const gameRect = gameContainer.getBoundingClientRect();
         createParticles(rect.left - gameRect.left, 0);
-
         runJumps++;
         updateQuest('jump');
     }
@@ -343,7 +331,6 @@ function handleKeyUp(event) {
     if (event.key === 'ArrowDown') endDucking();
 }
 
-// --- МОБИЛЬНОЕ УПРАВЛЕНИЕ ---
 mobileJumpBtn.addEventListener('touchstart', (e) => {
     e.preventDefault();
     if (!isGameRunning) startGame();
@@ -352,7 +339,6 @@ mobileJumpBtn.addEventListener('touchstart', (e) => {
 mobileDuckBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startDucking(); });
 mobileDuckBtn.addEventListener('touchend', (e) => { e.preventDefault(); endDucking(); });
 
-// --- ОБРАБОТЧИКИ МОДАЛОК ---
 dailyBtn.onclick = () => {
     dailyModal.style.display = 'block';
     claimDailyBtn.style.display = 'block';
@@ -386,7 +372,6 @@ claimDailyBtn.onclick = async () => {
     } catch (e) { dailyText.innerHTML = "Ошибка соединения с сервером"; }
 };
 
-// --- МАГАЗИН ---
 buyGlassesBtn.onclick = () => {
     if (coins >= glassesPrice && !hasGlasses) {
         coins -= glassesPrice; hasGlasses = true;
@@ -413,11 +398,9 @@ buyMagnetBtn.onclick = () => {
     }
 };
 
-// --- ИГРОВОЙ ЦИКЛ ---
 function gameLoop() {
     if (!isGameRunning) return;
 
-    // Физика
     if (!isGrounded) {
         yVelocity -= gravity;
         yPosition += yVelocity;
@@ -431,113 +414,114 @@ function gameLoop() {
     }
     player.style.bottom = yPosition + 'px';
 
-    // Счет
     score += 1;
     const currentScore = Math.floor(score / 10);
     scoreDisplay.textContent = String(currentScore).padStart(5, '0');
 
-    // Биомы
     const tier = Math.floor(currentScore / 300);
     if (tier !== currentBiomeTier) {
         updateBiome(currentScore);
         currentBiomeTier = tier;
     }
 
-    // Рекорд
     if (currentScore > highScore) {
         highScore = currentScore;
         highScoreDisplay.textContent = `HI ${String(highScore).padStart(5, '0')}`;
     }
 
-    // Спавн объектов и погоды
-    spawnObstacleTimer++; if (spawnObstacleTimer > 130) { spawnObstacle(); spawnObstacleTimer = 0; }
-    spawnCoinTimer++; if (spawnCoinTimer > 140) { spawnCoin(); spawnCoinTimer = 0; } 
+    // СПАВН (Уменьшили таймер с 200 до 120)
+    spawnObstacleTimer++; 
+    if (spawnObstacleTimer > 120 + Math.random() * 60) { 
+        spawnObstacle(); 
+        spawnObstacleTimer = 0; 
+    }
+    spawnCoinTimer++; if (spawnCoinTimer > 250) { spawnCoin(); spawnCoinTimer = 0; } 
     spawnCloudTimer++; if (spawnCloudTimer > 300) { spawnCloud(); spawnCloudTimer = 0; }
     spawnWeatherTimer++; if (spawnWeatherTimer > 10) { spawnWeather(); spawnWeatherTimer = 0; }
 
-    const speedModifier = window.innerWidth < 900 ? 1.5 : 4.5;
-    const weatherSpeed = window.innerWidth < 900 ? 0.6 : 1;
+    const speedModifier = window.innerWidth < 900 ? 3.5 : 6;
 
-    // Движение препятствий
     const obstacles = document.querySelectorAll('.obstacle');
     for (let i = obstacles.length - 1; i >= 0; i--) {
         const obs = obstacles[i];
         let currentLeft = parseFloat(obs.style.left);
-        const pxLeft = (currentLeft / 100) * window.innerWidth - speedModifier;
-        obs.style.left = (pxLeft / window.innerWidth) * 100 + 'vw';
+        if (isNaN(currentLeft)) currentLeft = gameContainer.offsetWidth;
+        currentLeft -= speedModifier;
+        obs.style.left = currentLeft + 'px';
         
         if (checkCollision(player, obs)) { endGame(); return; }
-        if (pxLeft < -100) obs.remove();
+        if (currentLeft < -150) obs.remove();
     }
 
-    // Движение монет
     const coinElements = document.querySelectorAll('.coin');
     coinElements.forEach(coin => {
-        let currentLeft = parseFloat(coin.style.left);
-        let currentBottom = parseFloat(coin.style.bottom);
-        
-        const pxLeft = (currentLeft / 100) * window.innerWidth - (speedModifier - 0.5);
-        coin.style.left = (pxLeft / window.innerWidth) * 100 + 'vw';
+        let currentLeft = parseFloat(coin.style.left) || gameContainer.offsetWidth;
+        let currentBottom = parseFloat(coin.style.bottom) || 40;
+        currentLeft -= speedModifier;
 
         if (hasMagnet) {
             const coinRect = coin.getBoundingClientRect();
             const playerRect = player.getBoundingClientRect();
-            const distX = playerRect.left - coinRect.left;
-            const distY = playerRect.top - coinRect.top;
-            if (distX < 250 && distX > 0 && Math.abs(distY) < 150) {
-                coin.style.left = ((pxLeft + distX * 0.1) / window.innerWidth) * 100 + 'vw';
-                coin.style.bottom = (currentBottom + distY * 0.1) + 'px';
+            const px = playerRect.left + playerRect.width / 2;
+            const py = playerRect.top + playerRect.height / 2;
+            const cx = coinRect.left + coinRect.width / 2;
+            const cy = coinRect.top + coinRect.height / 2;
+            const dx = px - cx;
+            const dy = py - cy;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < 200) {
+                currentLeft += dx * 0.15;
+                currentBottom -= dy * 0.15;
             }
         }
 
-        if (checkCollision(player, coin)) {
+        coin.style.left = currentLeft + 'px';
+        coin.style.bottom = currentBottom + 'px';
+
+        const r1 = player.getBoundingClientRect();
+        const r2 = coin.getBoundingClientRect();
+        const hit = !(r1.right < r2.left || r1.left > r2.right || r1.bottom < r2.top || r1.top > r2.bottom);
+
+        if (hit) {
             coin.remove();
             coins += hasGlasses ? 2 : 1;
             coinsDisplay.textContent = `🪙 ${coins}`;
             runCoins++;
             updateQuest('coin');
-        } else if (pxLeft < -50) {
+        } else if (currentLeft < -50) {
             coin.remove();
         }
     });
 
-    // Движение облаков
     const clouds = document.querySelectorAll('.cloud');
     clouds.forEach(cloud => {
-        let currentLeft = parseFloat(cloud.style.left);
-        const pxLeft = (currentLeft / 100) * window.innerWidth - 1;
-        cloud.style.left = (pxLeft / window.innerWidth) * 100 + 'vw';
-        if (pxLeft < -100) cloud.remove();
+        let currentLeft = parseFloat(cloud.style.left) || gameContainer.offsetWidth;
+        currentLeft -= 1.5;
+        cloud.style.left = currentLeft + 'px';
+        if (currentLeft < -100) cloud.remove();
     });
 
-    // Движение погоды (ЧАСТИЦЫ)
     const weatherParticles = document.querySelectorAll('.weather-particle');
     weatherParticles.forEach(p => {
         let left = parseFloat(p.style.left) || 0;
         let top = parseFloat(p.style.top) || 0;
-        
-        // Если у частицы нет скорости, задаем стандартную
         if (!p.vx) p.vx = -5;
         if (!p.vy) p.vy = 2;
-        
-        left += p.vx * weatherSpeed;
-        top += p.vy * weatherSpeed;
-        
+        left += p.vx;
+        top += p.vy;
         p.style.left = left + 'px';
         p.style.top = top + 'px';
-        
-        // Удаляем, если улетела за экран
-        if (left < -50 || top > 450 || top < -50) p.remove();
+        if (left < -50 || top > gameContainer.offsetHeight + 50 || top < -50) p.remove();
     });
 
     animationFrameId = requestAnimationFrame(gameLoop);
 }
 
-// --- ХИТБОКС ---
 function checkCollision(obj1, obj2) {
     const r1 = obj1.getBoundingClientRect();
     const r2 = obj2.getBoundingClientRect();
-    const padding = window.innerWidth < 900 ? 18 : 12; 
+    const padding = window.innerWidth < 900 ? 8 : 12; 
     return !(
         r1.right - padding < r2.left + padding || 
         r1.left + padding > r2.right - padding ||
@@ -546,7 +530,6 @@ function checkCollision(obj1, obj2) {
     );
 }
 
-// --- СТАРТ И ФИНАЛ ---
 function startGame() {
     const playerName = (nameInput.value.trim() || 'Аноним').slice(0, 20);
     localStorage.setItem('dino_playername', playerName);
@@ -592,7 +575,6 @@ function endGame() {
     shopContainer.style.display = 'none'; gameMenu.style.display = 'flex';
 }
 
-// --- СЕКРЕТНЫЙ АДМИН-РЕЖИМ ---
 function activateAdminMode() {
     coins += 99999;
     coinsDisplay.textContent = `🪙 ${coins}`;
@@ -617,7 +599,6 @@ menuTitle.addEventListener('click', () => {
     if (titleClickCount >= 5) { activateAdminMode(); titleClickCount = 0; }
 });
 
-// --- ИНИЦИАЛИЗАЦИЯ ---
 startBtn.addEventListener('click', startGame);
 window.addEventListener('keydown', handleKeyDown);
 window.addEventListener('keyup', handleKeyUp);
