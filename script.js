@@ -237,7 +237,7 @@ function spawnWeather() {
 function spawnCloud() {
     const cloud = document.createElement('div');
     cloud.classList.add('cloud');
-    cloud.style.width = Math.random() * 40 + 40 + 'px'; // Сделали облака чуть шире
+    cloud.style.width = Math.random() * 40 + 40 + 'px';
     cloud.style.height = (parseFloat(cloud.style.width) / 3) + 'px';
     cloud.style.top = Math.random() * 100 + 20 + 'px';
     cloud.style.left = gameContainer.offsetWidth + 'px';
@@ -247,7 +247,6 @@ function spawnCloud() {
 function spawnObstacle() {
     const existingObstacles = document.querySelectorAll('.obstacle');
     for (let obs of existingObstacles) {
-        // УМЕНЬШИЛИ ДИСТАНЦИЮ с 350 до 250 пикселей
         if (parseFloat(obs.style.left) > gameContainer.offsetWidth - 250) {
             return; 
         }
@@ -429,9 +428,18 @@ function gameLoop() {
         highScoreDisplay.textContent = `HI ${String(highScore).padStart(5, '0')}`;
     }
 
-    // СПАВН (Уменьшили таймер с 200 до 120)
+    // --- СЛОЖНОСТЬ И СПАВН ---
+    // Базовая скорость (на телефоне медленнее, на ПК быстрее)
+    const baseSpeed = window.innerWidth < 900 ? 3.5 : 6;
+    // Скорость растет с каждым биомом (0, 1, 2, 3)
+    const currentSpeed = baseSpeed + (currentBiomeTier * 0.8); 
+
     spawnObstacleTimer++; 
-    if (spawnObstacleTimer > 120 + Math.random() * 60) { 
+    // Интервал спавна уменьшается с каждым биомом (появляются чаще)
+    const baseSpawn = 120 + Math.random() * 60;
+    const currentSpawnRate = Math.max(60, baseSpawn - (currentBiomeTier * 15));
+    
+    if (spawnObstacleTimer > currentSpawnRate) { 
         spawnObstacle(); 
         spawnObstacleTimer = 0; 
     }
@@ -439,25 +447,25 @@ function gameLoop() {
     spawnCloudTimer++; if (spawnCloudTimer > 300) { spawnCloud(); spawnCloudTimer = 0; }
     spawnWeatherTimer++; if (spawnWeatherTimer > 10) { spawnWeather(); spawnWeatherTimer = 0; }
 
-    const speedModifier = window.innerWidth < 900 ? 3.5 : 6;
-
+    // Движение препятствий (Используем currentSpeed)
     const obstacles = document.querySelectorAll('.obstacle');
     for (let i = obstacles.length - 1; i >= 0; i--) {
         const obs = obstacles[i];
         let currentLeft = parseFloat(obs.style.left);
         if (isNaN(currentLeft)) currentLeft = gameContainer.offsetWidth;
-        currentLeft -= speedModifier;
+        currentLeft -= currentSpeed;
         obs.style.left = currentLeft + 'px';
         
         if (checkCollision(player, obs)) { endGame(); return; }
         if (currentLeft < -150) obs.remove();
     }
 
+    // Движение монет (Используем currentSpeed)
     const coinElements = document.querySelectorAll('.coin');
     coinElements.forEach(coin => {
         let currentLeft = parseFloat(coin.style.left) || gameContainer.offsetWidth;
         let currentBottom = parseFloat(coin.style.bottom) || 40;
-        currentLeft -= speedModifier;
+        currentLeft -= currentSpeed;
 
         if (hasMagnet) {
             const coinRect = coin.getBoundingClientRect();
@@ -497,7 +505,7 @@ function gameLoop() {
     const clouds = document.querySelectorAll('.cloud');
     clouds.forEach(cloud => {
         let currentLeft = parseFloat(cloud.style.left) || gameContainer.offsetWidth;
-        currentLeft -= 1.5;
+        currentLeft -= 1.5; // Облака плывут с постоянной скоростью
         cloud.style.left = currentLeft + 'px';
         if (currentLeft < -100) cloud.remove();
     });
