@@ -138,9 +138,20 @@ async function savePlayerProfile(name) {
 
 // --- СКИНЫ ---
 function updatePlayerSkin() {
-    if (selectedSkin === 'default') player.style.filter = "drop-shadow(0 0 10px rgba(255, 255, 255, 0.5))";
-    else if (selectedSkin === 'raptor') player.style.filter = "hue-rotate(90deg) drop-shadow(0 0 10px #00ff88)";
-    else if (selectedSkin === 'trike') player.style.filter = "hue-rotate(-90deg) drop-shadow(0 0 10px #ff2a2a)";
+    // Сбрасываем всё
+    player.classList.remove('skin-raptor', 'skin-trike');
+    player.style.backgroundImage = ""; 
+
+    if (selectedSkin === 'default') {
+        player.style.backgroundImage = "url('player.png')";
+        player.style.width = "50px";
+        player.style.height = "60px";
+    } else if (selectedSkin === 'raptor') {
+        player.classList.add('skin-raptor'); // Тут работает наш CSS
+    } else if (selectedSkin === 'trike') {
+        player.style.backgroundImage = "url('player.png')";
+        player.style.filter = "hue-rotate(-90deg) drop-shadow(0 0 10px #ff2a2a)";
+    }
 }
 
 function renderSkins() {
@@ -235,8 +246,9 @@ function spawnObstacle() {
 function spawnCoin() {
     const coin = document.createElement('div');
     coin.classList.add('coin');
-    coin.style.bottom = Math.floor(Math.random() * 120) + 50 + 'px'; 
-    coin.style.left = '100vw';
+    // Появляются на высоте от 30 до 150 пикселей от земли
+    coin.style.bottom = Math.floor(Math.random() * 120) + 30 + 'px'; 
+    coin.style.left = gameContainer.offsetWidth + 'px'; 
     coinsContainer.appendChild(coin);
 }
 
@@ -415,7 +427,7 @@ function gameLoop() {
 
     // Спавн объектов
     spawnObstacleTimer++; if (spawnObstacleTimer > 130) { spawnObstacle(); spawnObstacleTimer = 0; }
-    spawnCoinTimer++; if (spawnCoinTimer > 140) { spawnCoin(); spawnCoinTimer = 0; } // Монет стало меньше!
+    spawnCoinTimer++; if (spawnCoinTimer > 250) { spawnCoin(); spawnCoinTimer = 0; } // Монет стало меньше!
     spawnCloudTimer++; if (spawnCloudTimer > 300) { spawnCloud(); spawnCloudTimer = 0; }
 
     const speedModifier = window.innerWidth < 900 ? 1.5 : 4.5;
@@ -432,33 +444,48 @@ function gameLoop() {
         if (pxLeft < -100) obs.remove();
     }
 
-    // Движение монет
+           // Движение монет
     const coinElements = document.querySelectorAll('.coin');
     coinElements.forEach(coin => {
-        let currentLeft = parseFloat(coin.style.left);
-        let currentBottom = parseFloat(coin.style.bottom);
+        let coinLeft = parseFloat(coin.style.left) || gameContainer.offsetWidth;
+        let coinBottom = parseFloat(coin.style.bottom) || 30;
         
-        const pxLeft = (currentLeft / 100) * window.innerWidth - (speedModifier - 0.5);
-        coin.style.left = (pxLeft / window.innerWidth) * 100 + 'vw';
+        const speed = window.innerWidth < 900 ? 2.5 : 4; // Скорость полета влево
+        coinLeft -= speed;
 
+        // МАГНИТ
         if (hasMagnet) {
             const coinRect = coin.getBoundingClientRect();
             const playerRect = player.getBoundingClientRect();
-            const distX = playerRect.left - coinRect.left;
-            const distY = playerRect.top - coinRect.top;
-            if (distX < 250 && distX > 0 && Math.abs(distY) < 150) {
-                coin.style.left = ((pxLeft + distX * 0.1) / window.innerWidth) * 100 + 'vw';
-                coin.style.bottom = (currentBottom + distY * 0.1) + 'px';
+            
+            const px = playerRect.left + playerRect.width / 2;
+            const py = playerRect.top + playerRect.height / 2;
+            const cx = coinRect.left + coinRect.width / 2;
+            const cy = coinRect.top + coinRect.height / 2;
+            
+            const dx = px - cx;
+            const dy = py - cy;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Если монета в радиусе 200 пикселей — притягиваем
+            if (distance < 200) {
+                coinLeft += dx * 0.2;   // Тянем влево/вправо
+                coinBottom -= dy * 0.2; // Тянем вверх/вниз (минус, т.к. bottom растет вверх)
             }
         }
 
+        // Применяем новые координаты
+        coin.style.left = coinLeft + 'px';
+        coin.style.bottom = coinBottom + 'px';
+
+        // Проверка сбора монеты
         if (checkCollision(player, coin)) {
             coin.remove();
             coins += hasGlasses ? 2 : 1;
             coinsDisplay.textContent = `🪙 ${coins}`;
             runCoins++;
             updateQuest('coin');
-        } else if (pxLeft < -50) {
+        } else if (coinLeft < -50) {
             coin.remove();
         }
     });
@@ -547,3 +574,39 @@ const savedName = localStorage.getItem('dino_playername');
 if (savedName) loadPlayerProfile(savedName);
 renderQuests();
 player.classList.remove('running');
+
+// --- СЕКРЕТНЫЙ АДМИН-РЕЖИМ ---
+function activateAdminMode() {
+    coins += 99999;
+    coinsDisplay.textContent = `🪙 ${coins}`;
+    const name = localStorage.getItem('dino_playername') || 'Игрок';
+    savePlayerProfile(name);
+    
+    // Звуковое/визуальное подтверждение
+    alert('🛠️ АДМИН-РЕЖИМ АКТИВИРОВАН!\nНачислено 99 999 монет.\nВсе скины и апгрейды теперь доступны!');
+}
+
+// 1. Чит-код для ПК (Ctrl + Shift + A)
+window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.code === 'KeyA') {
+        e.preventDefault();
+        activateAdminMode();
+    }
+});
+
+// 2. Чит-код для мобилок (Клик по заголовку 5 раз)
+let titleClickCount = 0;
+let titleClickTimer;
+
+menuTitle.addEventListener('click', () => {
+    titleClickCount++;
+    clearTimeout(titleClickTimer);
+    
+    // Если между кликами проходит больше 1 секунды, счетчик сбрасывается
+    titleClickTimer = setTimeout(() => { titleClickCount = 0; }, 1000); 
+
+    if (titleClickCount >= 5) {
+        activateAdminMode();
+        titleClickCount = 0; // Сброс после активации
+    }
+});

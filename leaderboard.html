@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ТОП ИГРОКОВ - Dino RPG</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            margin: 0; padding: 0; background-color: #05050a;
+            background-image: radial-gradient(circle at center, #111122 0%, #000 100%);
+            color: #fff; font-family: 'Share Tech Mono', monospace;
+            display: flex; flex-direction: column; align-items: center;
+            min-height: 100vh; padding: 20px;
+        }
+
+        /* Эффект сканирующих линий (CRT) */
+        .crt-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.15), rgba(0,0,0,0.15) 1px, transparent 1px, transparent 2px);
+            pointer-events: none; z-index: 9999;
+        }
+
+        h1 {
+            font-family: 'Press Start 2P', cursive; color: #ffd700;
+            text-shadow: 0 0 15px #ffd700, 0 0 30px #ff8c00;
+            text-align: center; margin-top: 40px; font-size: 24px;
+        }
+
+        .leaderboard-container {
+            width: 100%; max-width: 600px;
+            background: rgba(10, 10, 15, 0.85); border: 3px solid #00ff88;
+            border-radius: 10px; padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3), inset 0 0 20px rgba(0, 255, 136, 0.1);
+            margin-top: 30px; backdrop-filter: blur(5px);
+        }
+
+        .player-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 10px; border-bottom: 1px dashed #333;
+            font-size: 18px; transition: all 0.2s;
+        }
+        
+        .player-row:last-child { border-bottom: none; }
+        .player-row:hover { background: rgba(0, 255, 136, 0.1); transform: scale(1.02); }
+
+        .rank { font-family: 'Press Start 2P', cursive; font-size: 14px; color: #888; width: 40px; }
+        .name { flex-grow: 1; color: #fff; text-shadow: 0 0 5px rgba(255,255,255,0.5); }
+        .score { font-family: 'Press Start 2P', cursive; color: #00ff88; text-shadow: 0 0 10px #00ff88; font-size: 16px; }
+
+        /* Стили для топ-3 */
+        .player-row:nth-child(1) .rank { color: #ffd700; text-shadow: 0 0 10px #ffd700; }
+        .player-row:nth-child(2) .rank { color: #c0c0c0; text-shadow: 0 0 10px #c0c0c0; }
+        .player-row:nth-child(3) .rank { color: #cd7f32; text-shadow: 0 0 10px #cd7f32; }
+        
+        .player-row:nth-child(1) .name { color: #ffd700; }
+
+        .loading { text-align: center; color: #00ff88; font-family: 'Press Start 2P', cursive; font-size: 12px; animation: blink 1s infinite alternate; }
+        @keyframes blink { from { opacity: 0.5; } to { opacity: 1; } }
+
+        .back-btn {
+            margin-top: 30px; padding: 12px 25px;
+            font-family: 'Press Start 2P', cursive; font-size: 12px;
+            background: transparent; color: #00ff88; border: 2px solid #00ff88;
+            cursor: pointer; text-decoration: none; border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
+            transition: all 0.2s;
+        }
+        .back-btn:hover { background: #00ff88; color: #000; box-shadow: 0 0 20px #00ff88; }
+    </style>
+</head>
+<body>
+
+    <div class="crt-overlay"></div>
+
+    <h1>🏆 ЗАЛ СЛАВЫ</h1>
+
+    <div class="leaderboard-container" id="board">
+        <div class="loading">ЗАГРУЗКА РЕКОРДОВ...</div>
+    </div>
+
+    <a href="index.html" class="back-btn">◀ ВЕРНУТЬСЯ В ИГРУ</a>
+
+    <script>
+        const API_BASE = 'https://dino-game-backend-summer-tide-6155.fly.dev';
+
+        async function fetchLeaderboard() {
+            try {
+                // Делаем запрос к нашему серверу на Fly.io
+                const response = await fetch(`${API_BASE}/api/leaderboard`);
+                const data = await response.json();
+                const board = document.getElementById('board');
+                
+                board.innerHTML = ''; // Очищаем надпись "Загрузка"
+
+                if (data.length === 0) {
+                    board.innerHTML = '<div class="loading">Пока никто не играл. Стань первым!</div>';
+                    return;
+                }
+
+                // Перебираем всех игроков и создаем красивые строчки
+                data.forEach((player, index) => {
+                    const row = document.createElement('div');
+                    row.className = 'player-row';
+                    
+                    // Добавляем медальки для топ-3
+                    let medal = '';
+                    if (index === 0) medal = '🥇';
+                    else if (index === 1) medal = '🥈';
+                    else if (index === 2) medal = '🥉';
+
+                    row.innerHTML = `
+                        <div class="rank">${medal || (index + 1) + '.'}</div>
+                        <div class="name">${player.name}</div>
+                        <div class="score">${player.score}</div>
+                    `;
+                    board.appendChild(row);
+                });
+            } catch (error) {
+                document.getElementById('board').innerHTML = '<div class="loading" style="color:#ff2a2a;">ОШИБКА СЕРВЕРА ❌</div>';
+            }
+        }
+
+        // Запускаем загрузку при открытии страницы
+        fetchLeaderboard();
+    </script>
+</body>
+</html>

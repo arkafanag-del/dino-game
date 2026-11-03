@@ -195,3 +195,25 @@ body {
     .menu-actions { flex-direction: column; width: 100%; max-width: 200px; gap: 8px; }
     .action-btn { padding: 12px; font-size: 14px; }
 }
+
+/* --- РАПТОР (Нормальный) --- */
+.player.skin-raptor {
+    background-image: url('raptor.png') !important;
+    
+    /* Вписываем картинку без искажений */
+    background-size: contain !important; 
+    background-repeat: no-repeat;
+    background-position: bottom center; /* Прижимаем к земле и центрируем */
+    
+    animation: none; 
+    filter: drop-shadow(0 0 10px #00ff88);
+    
+    /* ДЕЛАЕМ КОНТЕЙНЕР КВАДРАТНЫМ */
+    width: 120px; 
+    height: 120px;
+}
+
+.player.skin-raptor.ducking {
+    height: 60px !important; 
+    width: 100px !important;
+}
