@@ -106,22 +106,24 @@ body {
 
 /* --- МОБИЛЬНЫЕ КНОПКИ (Изначально скрыты на ПК) --- */
 .mobile-controls {
-    display: none; /* Скрыто на десктопе */
-    position: absolute; bottom: 15px; left: 0; width: 100%;
-    justify-content: space-between; padding: 0 20px; z-index: 60;
+    display: none; /* Скрыто на ПК */
+    width: 100%; max-width: 900px;
+    justify-content: space-between; 
+    padding: 15px 20px;
+    margin-top: 10px; /* Отступ от игры */
 }
 
 .mobile-controls button {
-    width: 70px; height: 70px; border-radius: 50%;
+    width: 80px; height: 80px; border-radius: 50%;
     background: rgba(0, 0, 0, 0.5); border: 2px solid #00ff88;
-    color: #00ff88; font-size: 30px; backdrop-filter: blur(5px);
+    color: #00ff88; font-size: 32px; backdrop-filter: blur(5px);
     box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
     -webkit-tap-highlight-color: transparent;
+    display: flex; align-items: center; justify-content: center;
 }
 .mobile-controls button:active {
     background: rgba(0, 255, 136, 0.3); transform: scale(0.95);
 }
-
 /* --- МЕНЮ --- */
 #game-menu {
     position: absolute; inset: 0; background: rgba(5, 5, 10, 0.85);
@@ -142,10 +144,10 @@ body {
 /* --- АДАПТИВНОСТЬ ДЛЯ ТЕЛЕФОНОВ (Срабатывает, если экран меньше 900px) --- */
 @media (max-width: 900px) {
     .top-panel { font-size: 10px; padding: 10px; }
-    .game-container { height: 55vh; border-width: 2px; border-radius: 0; }
+    .game-container { height: 45vh; border-width: 2px; border-radius: 0; }
     
     /* Динозаврик теперь стоит чуть правее */
-    .player { left: 80px; }
+    .player { left: 50px; }
 
     /* Прячем квесты на телефоне, чтобы не закрывали экран */
     .quest-panel { display: none; }
@@ -158,13 +160,17 @@ body {
     .shop-btn .price { font-size: 10px; }
 
     /* Показываем мобильные кнопки! */
-    .mobile-controls { display: flex; padding: 0 10px; bottom: 10px; }
+    .mobile-controls { 
+        display: flex; 
+        justify-content: space-around; /* Разносим кнопки по краям */
+        padding: 10px;     
+     }
     
     /* Кнопки стали маленькими и полупрозрачными, чтобы не мешать играть */
     .mobile-controls button {
-        width: 50px; 
-        height: 50px; 
-        font-size: 20px;
+        width: 70px; 
+        height: 70px; 
+        font-size: 28px;
         background: rgba(0, 0, 0, 0.3); /* Почти прозрачный фон */
         border: 1px solid rgba(0, 255, 136, 0.5); /* Мягкая рамка */
         opacity: 0.7;

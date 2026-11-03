@@ -9,6 +9,7 @@
     
     <title>Dino Ultimate RPG</title>
     
+    <!-- Подключаем пиксельные шрифты от Google -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -17,6 +18,7 @@
 </head>
 <body>
 
+    <!-- Эффект старого монитора -->
     <div class="crt-overlay"></div>
 
     <div class="top-panel">
@@ -27,15 +29,19 @@
         </div>
     </div>
 
+    <!-- Игровое поле -->
     <div class="game-container biome-desert" id="main-game">
         
+        <!-- Неоновая линия земли -->
         <div class="ground-line"></div>
 
+        <!-- Панель квестов -->
         <div class="quest-panel">
             <h4>📜 КВЕСТЫ</h4>
             <div id="quest-list"></div>
         </div>
 
+        <!-- Магазин улучшений -->
         <div class="shop-container">
             <button id="buy-glasses-btn" class="shop-btn">
                 <span class="icon">🕶️</span>
@@ -59,19 +65,16 @@
             </button>
         </div>
 
+        <!-- Контейнеры для спавна объектов -->
         <div id="clouds"></div>
         <div id="obstacles"></div>
         <div id="coins-container"></div>
         <div id="particles-container"></div>
 
+        <!-- Сам динозаврик -->
         <div class="player"></div>
 
-        <!-- МОБИЛЬНЫЕ КНОПКИ УПРАВЛЕНИЯ -->
-        <div class="mobile-controls">
-            <button id="mobile-jump-btn">⬆️</button>
-            <button id="mobile-duck-btn">⬇️</button>
-        </div>
-
+        <!-- Меню (Game Over / Старт) -->
         <div id="game-menu">
             <h1 id="menu-title">ДИНОЗАВРИК</h1>
             <p id="menu-text">Нажмите Пробел или кнопку, чтобы начать</p>
@@ -84,6 +87,12 @@
             <input type="text" id="player-name-input" placeholder="Имя" maxlength="20" style="display: none;">
             <button id="start-btn">ИГРАТЬ</button>
         </div>
+    </div>
+
+    <!-- МОБИЛЬНЫЕ КНОПКИ УПРАВЛЕНИЯ (теперь они ПОД игрой) -->
+    <div class="mobile-controls">
+        <button id="mobile-jump-btn">⬆️</button>
+        <button id="mobile-duck-btn">⬇️</button>
     </div>
 
     <script src="script.js"></script>
