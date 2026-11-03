@@ -25,7 +25,7 @@ const nameInput = document.getElementById('player-name-input');
 const mobileJumpBtn = document.getElementById('mobile-jump-btn');
 const mobileDuckBtn = document.getElementById('mobile-duck-btn');
 
-const API_BASE = 'http://127.0.0.1:8000';
+const API_BASE = 'https://dino-game-backend-summer-tide-6155.fly.dev';
 
 let score = 0;
 let isGameRunning = false;
