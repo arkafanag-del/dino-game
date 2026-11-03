@@ -1,7 +1,7 @@
 import sqlite3
 import os
 
-DB_FILE = os.path.join(os.path.dirname(__file__), "dino.db")
+DB_FILE = "/data/dino.db" if os.path.exists("/data") else os.path.join(os.path.dirname(__file__), "dino.db")
 
 def get_db_connection():
     conn = sqlite3.connect(DB_FILE)
@@ -10,19 +10,23 @@ def get_db_connection():
 
 def init_db():
     with get_db_connection() as conn:
-        # Таблица для рекордов
+        # Таблица рекордов
         conn.execute("""
             CREATE TABLE IF NOT EXISTS scores (
                 name TEXT PRIMARY KEY,
                 score INTEGER NOT NULL
             )
         """)
-        # НОВАЯ Таблица для профилей RPG
+        # Таблица игроков (обновленная)
         conn.execute("""
             CREATE TABLE IF NOT EXISTS players (
                 name TEXT PRIMARY KEY,
                 coins INTEGER DEFAULT 0,
-                quests_done INTEGER DEFAULT 0
+                quests_done INTEGER DEFAULT 0,
+                selected_skin TEXT DEFAULT 'default',
+                unlocked_skins TEXT DEFAULT 'default',
+                last_daily TEXT DEFAULT '',
+                streak INTEGER DEFAULT 0
             )
         """)
         conn.commit()
