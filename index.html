@@ -5,12 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Dino Ultimate RPG 4.0</title>
-    
+    <title>Dino Ultimate RPG 6.2</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -21,6 +19,7 @@
     <div class="top-panel">
         <div class="hud-left">
             <div id="coins-display">🪙 0</div>
+            <div id="dna-display">🧬 0</div>
             <button id="mute-btn" class="icon-btn">🔊</button>
         </div>
         <div class="score-board">
@@ -30,66 +29,66 @@
     </div>
 
     <div class="game-container biome-desert" id="main-game">
-        
+        <div class="bg-hypnotic"></div>
         <div class="bg-layer bg-far"></div>
         <div class="bg-layer bg-near"></div>
         <div class="ground-line"></div>
 
+        <div id="lives-display" style="display:none;">❤️</div>
+        <div id="event-banner" style="display:none;"></div>
+
+        <div id="boss-hp-container" style="display: none;">
+            <div id="boss-name">БОСС</div>
+            <div id="boss-hp-bar"><div id="boss-hp-fill"></div></div>
+        </div>
+
         <div id="combo-display" style="display:none;">COMBO x2!</div>
         <div id="active-buffs"></div>
         <div id="pet-drone" style="display:none;">🛸</div>
+        <div id="pet-dog" style="display:none;">🐕</div>
 
         <div class="quest-panel">
-            <h4>📜 КВЕСТЫ</h4>
+            <div class="quest-title">📜 КВЕСТЫ</div>
             <div id="quest-list"></div>
         </div>
 
-        <!-- Контейнеры для объектов -->
         <div id="clouds" style="z-index: 1; position: absolute; inset: 0; pointer-events: none;"></div>
         <div id="obstacles" style="z-index: 5; position: absolute; inset: 0; pointer-events: none;"></div>
         <div id="coins-container" style="z-index: 6; position: absolute; inset: 0; pointer-events: none;"></div>
         <div id="powerups-container" style="z-index: 7; position: absolute; inset: 0; pointer-events: none;"></div>
         <div id="particles-container" style="z-index: 9; position: absolute; inset: 0; pointer-events: none;"></div>
+        <div id="boss-container" style="z-index: 8; position: absolute; inset: 0; pointer-events: none;"></div>
 
         <div class="player" id="player-character"></div>
 
-        <!-- Главное меню (сюда переехал магазин) -->
         <div id="game-menu">
-            <h1 id="menu-title">ДИНОЗАВРИК 4.0</h1>
+            <h1 id="menu-title">ДИНОЗАВРИК 6.2</h1>
             <p id="menu-text">Нажмите Пробел или кнопку, чтобы начать</p>
             
             <div class="menu-actions">
-                <button id="daily-btn" class="action-btn">🎁 БОНУС</button>
-                <button id="skins-btn" class="action-btn">🦖 СКИНЫ</button>
-                <button id="achievements-btn" class="action-btn">🏆 ДОСТИЖЕНИЯ</button>
+                <button id="daily-challenge-btn" class="action-btn" style="border-color:#ffd700; color:#ffd700;">🔥 ДЕЙЛИ</button>
+                <button id="skill-btn" class="action-btn">🌳 НАВЫКИ</button>
+                <button id="skins-btn" class="action-btn">🦖 КЛАССЫ</button>
                 <a href="leaderboard.html" class="action-btn">🏆 РЕКОРДЫ</a>
             </div>
 
-            <!-- МАГАЗИН ТЕПЕРЬ ЗДЕСЬ -->
+            <div class="checkpoint-selector">
+                <span>Стартовать с:</span>
+                <select id="start-biome-select">
+                    <option value="0">Пустыня</option>
+                    <option value="1" disabled>Джунгли</option>
+                    <option value="2" disabled>Ледники</option>
+                    <option value="3" disabled>Вулкан</option>
+                    <option value="4" disabled>Киберпанк</option>
+                </select>
+            </div>
+
             <div class="shop-container">
-                <button id="buy-glasses-btn" class="shop-btn">
-                    <span class="icon">🕶️</span>
-                    <span class="title">Очки</span>
-                    <span class="price">🪙 15</span>
-                </button>
-                
-                <button id="buy-shoes-btn" class="shop-btn">
-                    <span class="icon">👟</span>
-                    <span class="title">Кроссовки</span>
-                    <span class="price">🪙 30</span>
-                </button>
-
-                <button id="buy-magnet-btn" class="shop-btn">
-                    <span class="icon">🧲</span>
-                    <span class="title">Магнит</span>
-                    <span class="price">🪙 50</span>
-                </button>
-
-                <button id="buy-pet-btn" class="shop-btn">
-                    <span class="icon">🛸</span>
-                    <span class="title">Дрон</span>
-                    <span class="price">🪙 200</span>
-                </button>
+                <button id="buy-glasses-btn" class="shop-btn"><span class="icon">🕶️</span><span class="title">Очки</span><span class="price">🪙 15</span></button>
+                <button id="buy-shoes-btn" class="shop-btn"><span class="icon">👟</span><span class="title">Кроссовки</span><span class="price">🪙 30</span></button>
+                <button id="buy-magnet-btn" class="shop-btn"><span class="icon">🧲</span><span class="title">Магнит</span><span class="price">🪙 50</span></button>
+                <button id="buy-pet-btn" class="shop-btn"><span class="icon">🛸</span><span class="title">Дрон</span><span class="price">🪙 200</span></button>
+                <button id="buy-dog-btn" class="shop-btn"><span class="icon">🐕</span><span class="title">Собачка</span><span class="price">🪙 300</span></button>
             </div>
 
             <div class="leaderboard">
@@ -97,34 +96,42 @@
                 <div id="leaderboard-list">Загрузка...</div>
             </div>
 
-            <input type="text" id="player-name-input" placeholder="Введите имя" maxlength="20" style="display: none;">
+            <input type="text" id="player-name-input" placeholder="Введите имя для рекорда" maxlength="20" style="display: none;">
+            <button id="save-record-btn" style="display: none;">💾 СОХРАНИТЬ РЕКОРД</button>
             <button id="start-btn">ИГРАТЬ</button>
         </div>
 
-        <!-- Модалки -->
-        <div id="daily-modal" class="modal" style="display: none;">
-            <h2>🎁 ЕЖЕДНЕВНЫЙ БОНУС</h2>
-            <p id="daily-text"></p>
-            <button id="claim-daily-btn" class="action-btn">ЗАБРАТЬ</button>
+        <div id="skill-modal" class="modal" style="display: none;">
+            <h2>🌳 ДРЕВО НАВЫКОВ</h2>
+            <div class="skill-tree">
+                <div class="skill-branch">
+                    <h3>⚔️ СИЛА</h3>
+                    <button class="skill-btn" data-id="f_dmg">Урон оружия x2<br><small>30 🧬</small></button>
+                    <button class="skill-btn" data-id="f_hp">+1 жизнь<br><small>50 🧬</small></button>
+                </div>
+                <div class="skill-branch">
+                    <h3>🏃 ЛОВКОСТЬ</h3>
+                    <button class="skill-btn" data-id="a_jump">Прыжок +20%<br><small>30 🧬</small></button>
+                    <button class="skill-btn" data-id="a_magnet">Магнит x2<br><small>50 🧬</small></button>
+                </div>
+                <div class="skill-branch">
+                    <h3>🍀 УДАЧА</h3>
+                    <button class="skill-btn" data-id="l_coin">Монеты x2<br><small>30 🧬</small></button>
+                    <button class="skill-btn" data-id="l_event">Удача в событиях<br><small>50 🧬</small></button>
+                </div>
+            </div>
             <button class="close-modal-btn">ЗАКРЫТЬ</button>
         </div>
 
         <div id="skins-modal" class="modal" style="display: none;">
-            <h2>🦖 ВЫБОР ПЕРСОНАЖА</h2>
+            <h2>🦖 ВЫБОР КЛАССА</h2>
             <div class="skins-grid" id="skins-grid"></div>
-            <button class="close-modal-btn">ЗАКРЫТЬ</button>
-        </div>
-
-        <div id="achievements-modal" class="modal" style="display: none;">
-            <h2>🏆 ДОСТИЖЕНИЯ</h2>
-            <div id="achievements-list" style="text-align: left; margin: 15px 0; font-size: 14px; line-height: 1.8;"></div>
             <button class="close-modal-btn">ЗАКРЫТЬ</button>
         </div>
     </div>
 
     <div class="mobile-controls">
         <button id="mobile-jump-btn">⬆️</button>
-        <button id="mobile-duck-btn">⬇️</button>
     </div>
 
     <script src="script.js"></script>

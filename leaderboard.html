@@ -49,7 +49,7 @@
         .player-row:hover { background: rgba(0, 255, 136, 0.1); transform: scale(1.02); }
 
         .rank { font-family: 'Press Start 2P', cursive; font-size: 14px; color: #888; width: 40px; }
-        .name { flex-grow: 1; color: #fff; text-shadow: 0 0 5px rgba(255,255,255,0.5); }
+        .name { flex-grow: 1; color: #fff; text-shadow: 0 0 5px rgba(255,255,255,0.5); word-break: break-all; margin-right: 10px; }
         .score { font-family: 'Press Start 2P', cursive; color: #00ff88; text-shadow: 0 0 10px #00ff88; font-size: 16px; }
 
         /* Стили для топ-3 */
@@ -86,15 +86,30 @@
     <a href="index.html" class="back-btn">◀ ВЕРНУТЬСЯ В ИГРУ</a>
 
     <script>
+        // Убедись, что ссылка совпадает с твоим API_BASE в script.js
         const API_BASE = 'https://dino-game-backend-summer-tide-6155.fly.dev';
 
+        // Функция для защиты от XSS (чтобы нельзя было ввести <script> в имя)
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag] || tag)
+            );
+        }
+
         async function fetchLeaderboard() {
+            const board = document.getElementById('board');
             try {
                 // Делаем запрос к нашему серверу на Fly.io
                 const response = await fetch(`${API_BASE}/api/leaderboard`);
-                const data = await response.json();
-                const board = document.getElementById('board');
+                if (!response.ok) throw new Error('Network response was not ok');
                 
+                const data = await response.json();
                 board.innerHTML = ''; // Очищаем надпись "Загрузка"
 
                 if (data.length === 0) {
@@ -113,15 +128,17 @@
                     else if (index === 1) medal = '🥈';
                     else if (index === 2) medal = '🥉';
 
+                    // Используем escapeHTML для имени игрока
                     row.innerHTML = `
                         <div class="rank">${medal || (index + 1) + '.'}</div>
-                        <div class="name">${player.name}</div>
+                        <div class="name">${escapeHTML(player.name)}</div>
                         <div class="score">${player.score}</div>
                     `;
                     board.appendChild(row);
                 });
             } catch (error) {
-                document.getElementById('board').innerHTML = '<div class="loading" style="color:#ff2a2a;">ОШИБКА СЕРВЕРА ❌</div>';
+                console.error(error);
+                board.innerHTML = '<div class="loading" style="color:#ff2a2a;">ОШИБКА СЕРВЕРА ❌<br><br>Попробуйте позже</div>';
             }
         }
 
