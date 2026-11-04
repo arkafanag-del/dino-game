@@ -51,7 +51,10 @@ gameContainer.appendChild(weatherContainer);
 const API_BASE = 'https://dino-game-backend-summer-tide-6155.fly.dev';
 
 // --- ЗВУК ---
-let audioCtx, isMuted = false, musicTimer = null, musicStep = 0;
+let audioCtx;
+let isMuted = false;
+let lastJumpSoundTime = 0; 
+
 function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
 function playTone(startFreq, endFreq, duration, type) {
     if (isMuted || !audioCtx) return;
@@ -64,36 +67,28 @@ function playTone(startFreq, endFreq, duration, type) {
 }
 function playSFX(action) {
     initAudio(); if (isMuted) return;
-    if (action === 'jump') playTone(150, 300, 0.15, 'square');
+    if (action === 'jump') {
+        if (Date.now() - lastJumpSoundTime < 100) return; 
+        lastJumpSoundTime = Date.now();
+        playTone(150, 300, 0.15, 'square');
+    }
     if (action === 'coin') { playTone(800, 1000, 0.1, 'sine'); setTimeout(() => playTone(1200, 1500, 0.1, 'sine'), 50); }
     if (action === 'death') playTone(300, 50, 0.5, 'sawtooth');
     if (action === 'click') playTone(600, 600, 0.05, 'square');
     if (action === 'buy') { playTone(400, 600, 0.1, 'square'); setTimeout(() => playTone(600, 800, 0.1, 'square'), 100); }
     if (action === 'powerup') { playTone(600, 1200, 0.3, 'square'); setTimeout(() => playTone(1200, 1500, 0.2, 'sine'), 150); }
 }
-function startBiomeMusic(tier) {
-    if (musicTimer) clearInterval(musicTimer); if (isMuted) return;
-    musicStep = 0;
-    const scales = {
-        0: [130.81, 146.83, 164.81, 174.61, 196.00, 220.00],
-        1: [261.63, 311.13, 349.23, 392.00, 466.16],
-        2: [523.25, 659.25, 783.99, 1046.50],
-        3: [65.41, 77.78, 82.41, 98.00, 103.83],
-        4: [440.00, 554.37, 659.25, 880.00]
-    };
-    const scale = scales[tier] || scales[0];
-    const tempo = tier === 3 ? 150 : (tier === 1 ? 200 : 250); 
-    const playSeqNote = (freq, type, duration) => { if (!isMuted && isGameRunning) playTone(freq, freq, duration, type); };
-    musicTimer = setInterval(() => {
-        if (!isGameRunning || isMuted) return;
-        let noteFreq = scale[musicStep % scale.length];
-        if (tier === 4) { if (musicStep % 2 === 0) playSeqNote(noteFreq / 2, 'sawtooth', 0.1); playSeqNote(noteFreq * 2, 'square', 0.05); }
-        else if (tier === 0) { if (musicStep % 4 === 0) playSeqNote(noteFreq, 'triangle', 0.4); }
-        else if (tier === 1) { playSeqNote(noteFreq * 2, 'square', 0.1); }
-        else if (tier === 2) { playSeqNote(noteFreq, 'sine', 0.5); }
-        else { playSeqNote(noteFreq, 'sawtooth', 0.2); }
-        musicStep++;
-    }, tempo);
+
+// --- ФОНОВАЯ МУЗЫКА ---
+const bgMusic = new Audio();
+bgMusic.loop = true;
+bgMusic.volume = 0.4;
+const musicTracks = { 0: 'music_desert.mp3', 1: 'music_jungle.mp3', 2: 'music_ice.mp3', 3: 'music_volcano.mp3', 4: 'music_cyber.mp3' };
+function playBiomeMusic(tier) {
+    if (isMuted) return;
+    const track = musicTracks[tier];
+    if (bgMusic.src.indexOf(track) === -1 && track) { bgMusic.src = track; bgMusic.play().catch(e => console.log(e)); } 
+    else if (bgMusic.paused && track) { bgMusic.play().catch(e => console.log(e)); }
 }
 
 // --- СОСТОЯНИЕ ---
@@ -105,24 +100,18 @@ const glassesPrice = 15, shoesPrice = 30, magnetPrice = 50, petPrice = 200;
 
 let comboCount = 0, comboMultiplier = 1;
 let hasShield = false;
-let slowMoEndTime = 0;
 let megaJumpEndTime = 0;
-let petX = 100, petY = 100;
+let petX = 100, petY = 100, isInvincible = false; 
+
+let activeObstaclesCount = 0;
+let activeWeatherCount = 0;
+let consecutiveBirds = 0; // Защита от спама птиц
 
 let stats = JSON.parse(localStorage.getItem('dino_stats')) || { jumps: 0, coins: 0, deaths: 0, highScore: 0 };
-
-let selectedSkin = 'default';
-let unlockedSkins = ['default'];
-const skinList = [
-    { id: 'default', icon: '🦖', name: 'Динозавр', price: 0 },
-    { id: 'raptor', icon: '🦅', name: 'Раптор', price: 100 },
-    { id: 'trike', icon: '🦏', name: 'Трицератопс', price: 100 }
-];
+let selectedSkin = 'default', unlockedSkins = ['default'];
+const skinList = [{ id: 'default', icon: '🦖', name: 'Динозавр', price: 0 }, { id: 'raptor', icon: '🦅', name: 'Раптор', price: 100 }, { id: 'trike', icon: '🦏', name: 'Трицератопс', price: 100 }];
 let runJumps = 0, runCoins = 0;
-let quests = [
-    { id: 'jump', text: 'Прыгни 5 раз', target: 5, current: 0, reward: 5, done: false },
-    { id: 'coin', text: 'Собери 10 монет', target: 10, current: 0, reward: 10, done: false }
-];
+let quests = [{ id: 'jump', text: 'Прыгни 5 раз', target: 5, current: 0, reward: 5, done: false }, { id: 'coin', text: 'Собери 10 монет', target: 10, current: 0, reward: 10, done: false }];
 
 let yPosition = 0, yVelocity = 0, isGrounded = true;
 const gravity = 0.5;
@@ -141,8 +130,7 @@ async function loadOnlineLeaderboard() {
         const data = await res.json();
         leaderboardList.innerHTML = data.length ? '' : 'Пока никто не играл';
         data.forEach((entry, i) => {
-            const row = document.createElement('div'); 
-            row.style.cssText = "margin:2px 0;"; 
+            const row = document.createElement('div'); row.style.cssText = "margin:2px 0;"; 
             row.innerHTML = `${i+1}. <span style="color:#fff;">${escapeHtml(entry.name)}</span> — <span style="color:#00ff88; font-weight:bold;">${entry.score}</span>`;
             leaderboardList.appendChild(row);
         });
@@ -150,18 +138,13 @@ async function loadOnlineLeaderboard() {
 }
 async function sendScoreToBackend(playerName, playerScore) {
     try {
-        await fetch(`${API_BASE}/api/score`, {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ name: playerName, score: playerScore })
-        });
+        await fetch(`${API_BASE}/api/score`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name: playerName, score: playerScore }) });
         loadOnlineLeaderboard();
     } catch (e) { console.error(e); }
 }
 async function loadPlayerProfile(name) {
     try {
-        const res = await fetch(`${API_BASE}/api/player/load`, {
-            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name: name })
-        });
+        const res = await fetch(`${API_BASE}/api/player/load`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name: name }) });
         const data = await res.json();
         coins = data.coins; coinsDisplay.textContent = `🪙 ${coins}`;
         selectedSkin = data.selected_skin || 'default';
@@ -172,10 +155,7 @@ async function loadPlayerProfile(name) {
 async function savePlayerProfile(name) {
     if (!name || name === 'Аноним') return;
     try {
-        await fetch(`${API_BASE}/api/player/save`, {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ name: name, coins: coins, quests_done: 0, selected_skin: selectedSkin, unlocked_skins: unlockedSkins.join(',') })
-        });
+        await fetch(`${API_BASE}/api/player/save`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name: name, coins: coins, quests_done: 0, selected_skin: selectedSkin, unlocked_skins: unlockedSkins.join(',') }) });
     } catch (e) { console.error(e); }
 }
 
@@ -217,7 +197,7 @@ function renderQuests() {
     questListUI.innerHTML = '';
     quests.forEach(q => {
         const div = document.createElement('div'); div.className = `quest-item ${q.done ? 'done' : ''}`;
-        div.innerHTML = `${q.done ? '✅' : '⏳'} ${q.text} (${q.current}/${q.target})`;
+        div.innerHTML = `<span style="display:inline-block; width:20px;">${q.done ? '✅' : '⏳'}</span> ${q.text} (${q.current}/${q.target})`;
         questListUI.appendChild(div);
     });
 }
@@ -238,7 +218,8 @@ function updateBiome(scoreVal) {
     else if (scoreVal < 1000) { gameContainer.classList.add('biome-ice'); newTier = 2; }
     else if (scoreVal < 1500) { gameContainer.classList.add('biome-volcano'); newTier = 3; }
     else { gameContainer.classList.add('biome-cyber'); newTier = 4; }
-    if (isGameRunning && newTier !== currentBiomeTier) startBiomeMusic(newTier);
+    
+    if (isGameRunning && newTier !== currentBiomeTier) playBiomeMusic(newTier);
     currentBiomeTier = newTier;
 }
 
@@ -252,6 +233,7 @@ function spawnWeather() {
     else if (currentScore < 1500) { p.classList.add('weather-spark'); p.style.left = Math.random() * gameContainer.offsetWidth + 'px'; p.style.top = gameContainer.offsetHeight + 'px'; p.vx = -2; p.vy = -(Math.random() * 2 + 1); }
     else { p.classList.add('weather-matrix'); p.style.left = Math.random() * gameContainer.offsetWidth + 'px'; p.style.top = '-20px'; p.vx = 0; p.vy = Math.random() * 5 + 5; }
     weatherContainer.appendChild(p);
+    activeWeatherCount++;
 }
 
 function spawnCloud() {
@@ -260,13 +242,15 @@ function spawnCloud() {
     cloud.style.height = (parseFloat(cloud.style.width) / 3) + 'px';
     cloud.style.top = Math.random() * 100 + 20 + 'px';
     cloud.style.left = gameContainer.offsetWidth + 'px';
-    cloud.onclick = () => { playSFX('click'); cloud.style.transform = 'scale(1.5)'; cloud.style.opacity = '0'; setTimeout(() => cloud.remove(), 200); };
+    cloud.onclick = () => { playSFX('click'); cloud.style.opacity = '0'; setTimeout(() => cloud.remove(), 200); };
     cloudsContainer.appendChild(cloud);
 }
 
 function spawnObstacle() {
+    if (gameContainer.offsetWidth === 0) return false;
+
     const existingObstacles = document.querySelectorAll('.obstacle');
-    const minDistance = window.innerWidth < 900 ? 350 : 500; 
+    const minDistance = window.innerWidth < 900 ? 350 : 700; 
 
     for (let obs of existingObstacles) { 
         let obsLeft = parseFloat(obs.style.left);
@@ -276,54 +260,39 @@ function spawnObstacle() {
 
     const obstacle = document.createElement('div'); 
     obstacle.classList.add('obstacle');
+    obstacle.style.left = gameContainer.offsetWidth + 'px';
     
-    const wantsToBeFlying = Math.random() < 0.2;
-    let isFlying = false;
-
-    if (wantsToBeFlying) {
-        let cactusNearby = false;
-        for (let obs of existingObstacles) {
-            if (!obs.classList.contains('flying')) {
-                let obsLeft = parseFloat(obs.style.left);
-                if (obsLeft > gameContainer.offsetWidth - 400) cactusNearby = true;
-            }
-        }
-        if (!cactusNearby) isFlying = true;
-    } else {
-        let birdNearby = false;
-        for (let obs of existingObstacles) {
-            if (obs.classList.contains('flying')) {
-                let obsLeft = parseFloat(obs.style.left);
-                if (obsLeft > gameContainer.offsetWidth - 400) birdNearby = true;
-            }
-        }
-        if (birdNearby) isFlying = true; 
-    }
-
-    if (isFlying) { 
+    // ИСПРАВЛЕНО: Не больше 2 птиц подряд
+    if (consecutiveBirds < 2 && Math.random() < 0.25) { 
         obstacle.classList.add('flying'); 
+        consecutiveBirds++;
     } else { 
         obstacle.style.height = Math.floor(Math.random() * 30) + 50 + 'px'; 
         obstacle.style.width = Math.random() > 0.6 ? '55px' : '35px'; 
+        consecutiveBirds = 0; // Сбрасываем счетчик, пошел кактус
     }
     
-    obstacle.style.left = gameContainer.offsetWidth + 'px'; 
     obstaclesContainer.appendChild(obstacle);
+    activeObstaclesCount++;
     return true; 
 }
 
 function spawnCoin() {
+    if (gameContainer.offsetWidth === 0) return;
+    if (document.querySelectorAll('.coin').length >= 4) return; // Лимит монет
+
     const coin = document.createElement('div'); coin.classList.add('coin');
+    coin.style.left = gameContainer.offsetWidth + 'px';
     coin.style.bottom = Math.floor(Math.random() * 110) + 40 + 'px'; 
-    coin.style.left = gameContainer.offsetWidth + 'px'; 
     coinsContainer.appendChild(coin);
 }
 
 function spawnPowerup() {
-    const types = ['shield', 'slowmo', 'megajump'];
+    if (gameContainer.offsetWidth === 0) return;
+    const types = ['shield', 'megajump']; 
     const type = types[Math.floor(Math.random() * types.length)];
     const p = document.createElement('div'); p.classList.add('powerup', type);
-    p.innerHTML = type === 'shield' ? '🛡️' : (type === 'slowmo' ? '⏳' : '🚀');
+    p.innerHTML = type === 'shield' ? '🛡️' : '🚀';
     p.style.bottom = Math.floor(Math.random() * 100) + 50 + 'px';
     p.style.left = gameContainer.offsetWidth + 'px';
     p.dataset.type = type;
@@ -331,7 +300,9 @@ function spawnPowerup() {
 }
 
 function createParticles(x, y, color = '#00ff88') {
-    for (let i = 0; i < 5; i++) {
+    if (particlesContainer.children.length > 20) return; 
+
+    for (let i = 0; i < 4; i++) {
         const particle = document.createElement('div'); particle.classList.add('particle');
         particle.style.backgroundColor = color;
         const size = Math.random() * 8 + 4;
@@ -345,12 +316,7 @@ function createParticles(x, y, color = '#00ff88') {
 function doJump() {
     if (isGrounded && isGameRunning && !isDucking) {
         playSFX('jump'); 
-        // ИСПРАВЛЕНО: Проверка на Мега-Прыжок
-        if (Date.now() < megaJumpEndTime) {
-            yVelocity = 18; // Сила мега-прыжка
-        } else {
-            yVelocity = currentJumpForce;
-        }
+        yVelocity = (Date.now() < megaJumpEndTime) ? 18 : currentJumpForce;
         isGrounded = false;
         player.classList.remove('running');
         const rect = player.getBoundingClientRect(); const gameRect = gameContainer.getBoundingClientRect();
@@ -377,6 +343,8 @@ function endDucking() { isDucking = false; player.classList.remove('ducking'); }
 
 function handleKeyDown(event) {
     if (event.target.tagName === 'INPUT') return;
+    if (event.repeat) return; 
+
     if (event.code === 'Space' || event.key === 'ArrowUp') { event.preventDefault(); if (!isGameRunning) startGame(); else doJump(); }
     if (event.key === 'ArrowDown') { event.preventDefault(); startDucking(); }
 }
@@ -387,7 +355,7 @@ mobileDuckBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startD
 mobileDuckBtn.addEventListener('touchend', (e) => { e.preventDefault(); endDucking(); });
 
 // --- UI ---
-muteBtn.onclick = () => { isMuted = !isMuted; muteBtn.textContent = isMuted ? '🔇' : '🔊'; if (isMuted && musicTimer) clearInterval(musicTimer); else if (isGameRunning) startBiomeMusic(currentBiomeTier); };
+muteBtn.onclick = () => { isMuted = !isMuted; muteBtn.textContent = isMuted ? '🔇' : '🔊'; if (isMuted) { bgMusic.pause(); } else if (isGameRunning) { bgMusic.play().catch(e => console.log(e)); } };
 dailyBtn.onclick = () => { playSFX('click'); dailyModal.style.display = 'block'; claimDailyBtn.style.display = 'block'; dailyText.innerHTML = "Заходи каждый день, чтобы получать больше монет!"; };
 skinsBtn.onclick = () => { playSFX('click'); renderSkins(); skinsModal.style.display = 'block'; };
 achievementsBtn.onclick = () => { playSFX('click'); renderAchievements(); achievementsModal.style.display = 'block'; };
@@ -413,9 +381,6 @@ function gameLoop() {
     if (!isGameRunning) return;
 
     const now = Date.now();
-    let gameSpeedMultiplier = 1;
-
-    if (now < slowMoEndTime) gameSpeedMultiplier = 0.4;
 
     if (!isGrounded) {
         yVelocity -= gravity; yPosition += yVelocity;
@@ -442,79 +407,94 @@ function gameLoop() {
     if (currentScore > highScore) { highScore = currentScore; highScoreDisplay.textContent = `HI ${String(highScore).padStart(5, '0')}`; }
 
     const baseSpeed = window.innerWidth < 900 ? 3 : 4.5;
-    const currentSpeed = (baseSpeed + (currentBiomeTier * 0.75)) * gameSpeedMultiplier;
+    const currentSpeed = (baseSpeed + (currentBiomeTier * 0.75)); // Без замедления
 
+    // СПАВН
     spawnObstacleTimer++; 
     const baseSpawnRate = Math.max(80, 180 - currentBiomeTier * 25);
-    
-    const currentObstaclesCount = document.querySelectorAll('.obstacle').length;
-    
-    if (currentObstaclesCount < 2 && spawnObstacleTimer > baseSpawnRate + Math.random() * 40) { 
-        if (spawnObstacle()) {
-            spawnObstacleTimer = 0; 
-        }
+    if (activeObstaclesCount === 0 && spawnObstacleTimer > baseSpawnRate + Math.random() * 40) { 
+        if (spawnObstacle()) spawnObstacleTimer = 0;
     }
     
-    spawnCoinTimer++; if (spawnCoinTimer > 250) { spawnCoin(); spawnCoinTimer = 0; }
-    spawnPowerupTimer++; if (spawnPowerupTimer > 800) { spawnPowerup(); spawnPowerupTimer = 0; }
+    spawnCoinTimer++; if (spawnCoinTimer > 210) { spawnCoin(); spawnCoinTimer = 0; } 
+    spawnPowerupTimer++; if (spawnPowerupTimer > 600) { spawnPowerup(); spawnPowerupTimer = 0; }
     spawnCloudTimer++; if (spawnCloudTimer > 300) { spawnCloud(); spawnCloudTimer = 0; }
-    spawnWeatherTimer++; if (spawnWeatherTimer > 10) { spawnWeather(); spawnWeatherTimer = 0; }
+    
+    spawnWeatherTimer++; 
+    if (spawnWeatherTimer > 40 && activeWeatherCount < 15) { 
+        spawnWeather(); 
+        spawnWeatherTimer = 0; 
+    }
 
+    const playerRect = player.getBoundingClientRect();
+    const gameWidth = gameContainer.offsetWidth || 900;
+
+    // Движение препятствий
     const obstacles = document.querySelectorAll('.obstacle');
     for (let i = obstacles.length - 1; i >= 0; i--) {
-        const obs = obstacles[i]; let currentLeft = parseFloat(obs.style.left) || gameContainer.offsetWidth;
-        currentLeft -= currentSpeed; obs.style.left = currentLeft + 'px';
-        if (checkCollision(player, obs)) { 
-            if (hasShield) { hasShield = false; obs.remove(); playSFX('death'); gameContainer.classList.add('shake'); setTimeout(()=>gameContainer.classList.remove('shake'), 300); continue; } 
+        const obs = obstacles[i]; 
+        let x = parseFloat(obs.style.left);
+        if (isNaN(x)) x = gameWidth; 
+
+        x -= currentSpeed;
+        obs.style.left = x + 'px';
+        
+        const obsRect = obs.getBoundingClientRect();
+        if (!(playerRect.right - 12 < obsRect.left || playerRect.left + 12 > obsRect.right || playerRect.bottom - 12 < obsRect.top || playerRect.top + 12 > obsRect.bottom)) { 
+            if (isInvincible) { obs.remove(); activeObstaclesCount--; playSFX('death'); continue; } 
+            else if (hasShield) { hasShield = false; obs.remove(); activeObstaclesCount--; playSFX('death'); gameContainer.classList.add('shake'); setTimeout(()=>gameContainer.classList.remove('shake'), 300); continue; } 
             else { endGame(); return; }
         }
-        if (currentLeft < -150) obs.remove();
+        if (x < -150) { obs.remove(); activeObstaclesCount--; }
     }
 
+    // Движение бонусов
     const pElements = document.querySelectorAll('.powerup');
     pElements.forEach(p => {
-        let currentLeft = parseFloat(p.style.left) || gameContainer.offsetWidth;
-        currentLeft -= currentSpeed; p.style.left = currentLeft + 'px';
-        const r1 = player.getBoundingClientRect(); const r2 = p.getBoundingClientRect();
-        if (!(r1.right < r2.left || r1.left > r2.right || r1.bottom < r2.top || r1.top > r2.bottom)) {
+        let x = parseFloat(p.style.left);
+        if (isNaN(x)) x = gameWidth;
+
+        x -= currentSpeed;
+        p.style.left = x + 'px';
+        
+        const pRect = p.getBoundingClientRect();
+        if (!(playerRect.right < pRect.left || playerRect.left > pRect.right || playerRect.bottom < pRect.top || playerRect.top > pRect.bottom)) {
             playSFX('powerup'); 
             if (p.dataset.type === 'shield') { hasShield = true; }
-            else if (p.dataset.type === 'slowmo') { slowMoEndTime = now + 5000; }
             else if (p.dataset.type === 'megajump') { megaJumpEndTime = now + 5000; }
             p.remove();
-        } else if (currentLeft < -50) p.remove();
+        } else if (x < -50) p.remove();
     });
     
-    // ИСПРАВЛЕНО: Красивый вывод активных баффов
     let currentBuffsHTML = '';
+    if (isInvincible) currentBuffsHTML += '🌟 ';
     if (hasShield) currentBuffsHTML += '🛡️ ';
-    if (now < slowMoEndTime) currentBuffsHTML += '⏳ ';
     if (now < megaJumpEndTime) currentBuffsHTML += '🚀';
     activeBuffsUI.innerHTML = currentBuffsHTML;
 
+    // Движение монет
     const coinElements = document.querySelectorAll('.coin');
     coinElements.forEach(coin => {
-        let currentLeft = parseFloat(coin.style.left) || gameContainer.offsetWidth;
-        let currentBottom = parseFloat(coin.style.bottom) || 40;
-        currentLeft -= currentSpeed;
+        let x = parseFloat(coin.style.left);
+        if (isNaN(x)) x = gameWidth; 
 
-        let pullRadius = 200;
-        if (hasPet) pullRadius = 350;
+        let bottom = parseFloat(coin.style.bottom);
+        if (isNaN(bottom)) bottom = 40;
         
         if (hasMagnet || hasPet) {
-            const coinRect = coin.getBoundingClientRect(); const playerRect = player.getBoundingClientRect();
+            const coinRect = coin.getBoundingClientRect();
             const px = playerRect.left + playerRect.width / 2; const py = playerRect.top + playerRect.height / 2;
             const cx = coinRect.left + coinRect.width / 2; const cy = coinRect.top + coinRect.height / 2;
-            const dx = px - cx; const dy = py - cy; const distance = Math.sqrt(dx * dx + dy * dy);
-            if (distance < pullRadius) { currentLeft += dx * 0.15; currentBottom -= dy * 0.15; }
+            const dx = px - cx; const dy = py - cy; 
+            if (Math.sqrt(dx * dx + dy * dy) < (hasPet ? 350 : 200)) { x += dx * 0.15; bottom -= dy * 0.15; }
         }
 
-        coin.style.left = currentLeft + 'px'; coin.style.bottom = currentBottom + 'px';
+        x -= currentSpeed;
+        coin.style.left = x + 'px';
+        coin.style.bottom = bottom + 'px';
 
-        const r1 = player.getBoundingClientRect(); const r2 = coin.getBoundingClientRect();
-        const hit = !(r1.right < r2.left || r1.left > r2.right || r1.bottom < r2.top || r1.top > r2.bottom);
-
-        if (hit) {
+        const cRect = coin.getBoundingClientRect();
+        if (!(playerRect.right < cRect.left || playerRect.left > cRect.right || playerRect.bottom < cRect.top || playerRect.top > cRect.bottom)) {
             playSFX('coin'); coin.remove();
             comboCount++;
             if (comboCount >= 5) { comboMultiplier = 2; comboDisplay.style.display = 'block'; comboDisplay.textContent = 'COMBO x2!'; }
@@ -522,27 +502,39 @@ function gameLoop() {
             
             coins += (hasGlasses ? 2 : 1) * comboMultiplier;
             coinsDisplay.textContent = `🪙 ${coins}`;
-            
             runCoins++; stats.coins++; localStorage.setItem('dino_stats', JSON.stringify(stats));
             updateQuest('coin');
             
             clearTimeout(window.comboTimeout);
             window.comboTimeout = setTimeout(() => { comboCount = 0; comboMultiplier = 1; comboDisplay.style.display = 'none'; }, 3000);
-        } else if (currentLeft < -50) coin.remove();
+        } else if (x < -50) { 
+            coin.remove(); 
+            if (comboCount > 0) { comboCount = 0; comboMultiplier = 1; comboDisplay.style.display = 'none'; }
+        }
     });
 
-    const clouds = document.querySelectorAll('.cloud');
-    clouds.forEach(cloud => { let currentLeft = parseFloat(cloud.style.left) || gameContainer.offsetWidth; currentLeft -= 1.5; cloud.style.left = currentLeft + 'px'; if (currentLeft < -100) cloud.remove(); });
-    const weatherParticles = document.querySelectorAll('.weather-particle');
-    weatherParticles.forEach(p => { let left = parseFloat(p.style.left) || 0; let top = parseFloat(p.style.top) || 0; if (!p.vx) p.vx = -5; if (!p.vy) p.vy = 2; left += p.vx * gameSpeedMultiplier; top += p.vy * gameSpeedMultiplier; p.style.left = left + 'px'; p.style.top = top + 'px'; if (left < -50 || top > gameContainer.offsetHeight + 50 || top < -50) p.remove(); });
+    // Облака
+    document.querySelectorAll('.cloud').forEach(cloud => { 
+        let x = parseFloat(cloud.style.left);
+        if (isNaN(x)) x = gameWidth;
+        x -= 1.5; 
+        cloud.style.left = x + 'px';
+        if (x < -100) cloud.remove(); 
+    });
+    
+    // Погода
+    document.querySelectorAll('.weather-particle').forEach(p => { 
+        let x = (parseFloat(p.style.left) || 0) + p.vx; 
+        let y = (parseFloat(p.style.top) || 0) + p.vy; 
+        p.style.left = x + 'px'; 
+        p.style.top = y + 'px'; 
+        if (x < -50 || y > gameContainer.offsetHeight + 50 || y < -50) { 
+            p.remove(); 
+            activeWeatherCount--; 
+        } 
+    });
 
     animationFrameId = requestAnimationFrame(gameLoop);
-}
-
-function checkCollision(obj1, obj2) {
-    const r1 = obj1.getBoundingClientRect(); const r2 = obj2.getBoundingClientRect();
-    const padding = window.innerWidth < 900 ? 8 : 12; 
-    return !(r1.right - padding < r2.left + padding || r1.left + padding > r2.right - padding || r1.bottom - padding < r2.top + padding || r1.top + padding > r2.bottom - padding);
 }
 
 function startGame() {
@@ -552,17 +544,28 @@ function startGame() {
     if (lastScore > 0) sendScoreToBackend(playerName, lastScore);
 
     isGameRunning = true; isDucking = false;
-    gameMenu.style.display = 'none'; shopContainer.style.display = 'flex';
+    gameMenu.style.display = 'none'; 
     obstaclesContainer.innerHTML = ''; coinsContainer.innerHTML = ''; cloudsContainer.innerHTML = ''; particlesContainer.innerHTML = ''; weatherContainer.innerHTML = ''; powerupsContainer.innerHTML = '';
     
+    // СБРОС ВСЕХ ТАЙМЕРОВ И ПЕРЕМЕННЫХ
+    activeObstaclesCount = 0;
+    activeWeatherCount = 0;
+    consecutiveBirds = 0;
+    spawnObstacleTimer = 0;
+    spawnCoinTimer = 0;
+    spawnPowerupTimer = 0;
+    spawnCloudTimer = 0;
+    spawnWeatherTimer = 0;
+
     comboCount = 0; comboMultiplier = 1; comboDisplay.style.display = 'none';
-    hasShield = false; slowMoEndTime = 0; megaJumpEndTime = 0; activeBuffsUI.innerHTML = '';
+    hasShield = false; megaJumpEndTime = 0; activeBuffsUI.innerHTML = '';
     
     score = 0; yPosition = 0; yVelocity = 0; isGrounded = true;
     runJumps = 0; runCoins = 0; 
     quests.forEach(q => { q.current = 0; q.done = false; }); renderQuests();
     player.style.bottom = '0px'; player.classList.add('running'); player.classList.remove('ducking');
-    currentBiomeTier = 0; updateBiome(0); startBiomeMusic(0);
+    
+    currentBiomeTier = 0; updateBiome(0); playBiomeMusic(0); 
     
     if (hasPet) { petDrone.style.display = 'block'; petX = 100; petY = 100; }
     else petDrone.style.display = 'none';
@@ -574,7 +577,9 @@ function startGame() {
 
 function endGame() {
     if (!isGameRunning) return;
-    isGameRunning = false; cancelAnimationFrame(animationFrameId); if (musicTimer) clearInterval(musicTimer);
+    isGameRunning = false; cancelAnimationFrame(animationFrameId); 
+    bgMusic.pause(); 
+    
     playSFX('death'); gameContainer.classList.add('shake'); setTimeout(() => gameContainer.classList.remove('shake'), 400);
 
     localStorage.setItem('dino_highscore', String(highScore));
@@ -590,13 +595,16 @@ function endGame() {
     nameInput.style.display = 'block';
     nameInput.value = localStorage.getItem('dino_playername') || 'Игрок';
     savePlayerProfile(nameInput.value);
-    shopContainer.style.display = 'none'; gameMenu.style.display = 'flex';
+    
+    gameMenu.style.display = 'flex'; 
 }
 
 function activateAdminMode() {
     playSFX('buy'); coins += 99999; coinsDisplay.textContent = `🪙 ${coins}`;
+    isInvincible = !isInvincible; 
+    if (isInvincible) alert('🛠️ РЕЖИМ БОГА ВКЛЮЧЕН!\nБессмертие активировано, начислено 99 999 монет.');
+    else alert('🛠️ РЕЖИМ БОГА ВЫКЛЮЧЕН!\nТеперь вы снова смертны.');
     savePlayerProfile(localStorage.getItem('dino_playername') || 'Игрок');
-    alert('🛠️ АДМИН-РЕЖИМ АКТИВИРОВАН!');
 }
 
 window.addEventListener('keydown', (e) => { if (e.ctrlKey && e.shiftKey && e.code === 'KeyA') { e.preventDefault(); activateAdminMode(); } });
