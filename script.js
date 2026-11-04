@@ -53,38 +53,18 @@ const API_BASE = 'https://dino-game-backend-summer-tide-6155.fly.dev';
 
 // --- СЮЖЕТ ---
 const storyData = [
-  { 
-    title: "ГЛАВА 1: ПУСТЫНЯ (НАЧАЛО)", 
-    text: "Помнишь старые добрые времена? Тогда ты был просто пиксельным динозавриком, ждущим, когда же появится Wi-Fi. Ты прыгал через кактусы в бесконечной черно-белой пустыне... Но однажды сеть отключилась навсегда, и всё изменилось. Теперь это не просто игра — это реальность. Твой путь начинается там, где всё началось." 
-  },
-  { 
-    title: "ГЛАВА 2: ДЖУНГЛИ (ЭВОЛЮЦИЯ)", 
-    text: "Победив первого босса, ты чувствуешь небывалую силу. Эволюция пошла вверх! Из простого 2D-спрайта ты превратился в полноценного RPG-героя. В джунглях ты находишь заброшенные сервера Google. Местные птицы летают так же низко, как в старой игре, но теперь у них есть HP." 
-  },
-  { 
-    title: "ГЛАВА 3: ЛЕДНИКИ (ВРЕМЯ ЗАМЕРЛО)", 
-    text: "Ты попадаешь в Ледники Вечности. Здесь время застыло, как зависший браузер. Ты вспоминаешь, как бесконечно бежал по экрану, пока не наступал Game Over. Теперь у тебя есть сердца, монеты и возможность дать отпор. Ледяной ветер не остановит твою эволюцию." 
-  },
-  { 
-    title: "ГЛАВА 4: ВУЛКАН (ERROR 404)", 
-    text: "Вулкан Огненных Ошибок. Именно здесь сгорают сервера, когда интернет падает. Ты встречаешь старых врагов — Птеродактилей из классической игры. Но теперь ты можешь не только уворачиваться от них, но и прыгать им на голову! Пора показать им, чему ты научился." 
-  },
-  { 
-    title: "ГЛАВА 5: КИБЕРПАНК (ФИНАЛ)", 
-    text: "Киберпанк. Нейросети захватили мир. Злой ИИ, создавший лабиринты из кактусов и бесконечные пустыни, ждет тебя. Пора вернуть управление интернетом и переписать код игры!" 
-  },
-  { 
-    title: "ПОБЕДА! (НОВЫЙ РЕКОРД)", 
-    text: "Ты победил ИИ! Интернет восстановлен, но ты больше не тот маленький пиксельный динозаврик. Ты — настоящая легенда RPG. Готов ли ты отправиться в новое путешествие, когда Wi-Fi снова упадет?" 
-  }
+  { title: "ГЛАВА 1: ПУСТЫНЯ (НАЧАЛО)", text: "Помнишь старые добрые времена? Тогда ты был просто пиксельным динозавриком, ждущим, когда же появится Wi-Fi. Ты прыгал через кактусы в бесконечной черно-белой пустыне... Но однажды сеть отключилась навсегда, и всё изменилось. Теперь это не просто игра — это реальность. Твой путь начинается там, где всё началось." },
+  { title: "ГЛАВА 2: ДЖУНГЛИ (ЭВОЛЮЦИЯ)", text: "Победив первого босса, ты чувствуешь небывалую силу. Эволюция пошла вверх! Из простого 2D-спрайта ты превратился в полноценного RPG-героя. В джунглях ты находишь заброшенные сервера Google. Местные птицы летают так же низко, как в старой игре, но теперь у них есть HP." },
+  { title: "ГЛАВА 3: ЛЕДНИКИ (ВРЕМЯ ЗАМЕРЛО)", text: "Ты попадаешь в Ледники Вечности. Здесь время застыло, как зависший браузер. Ты вспоминаешь, как бесконечно бежал по экрану, пока не наступал Game Over. Теперь у тебя есть сердца, монеты и возможность дать отпор. Ледяной ветер не остановит твою эволюцию." },
+  { title: "ГЛАВА 4: ВУЛКАН (ERROR 404)", text: "Вулкан Огненных Ошибок. Именно здесь сгорают сервера, когда интернет падает. Ты встречаешь старых врагов — Птеродактилей из классической игры. Но теперь ты можешь не только уворачиваться от них, но и прыгать им на голову! Пора показать им, чему ты научился." },
+  { title: "ГЛАВА 5: КИБЕРПАНК (ФИНАЛ)", text: "Киберпанк. Нейросети захватили мир. Злой ИИ, создавший лабиринты из кактусов и бесконечные пустыни, ждет тебя. Пора вернуть управление интернетом и переписать код игры!" },
+  { title: "ПОБЕДА! (НОВЫЙ РЕКОРД)", text: "Ты победил ИИ! Интернет восстановлен, но ты больше не тот маленький пиксельный динозаврик. Ты — настоящая легенда RPG. Готов ли ты отправиться в новое путешествие, когда Wi-Fi снова упадет?" }
 ];
 
 let pendingStoryTier = 0;
 
 function showStory(tier) {
-  if (tier >= storyData.length) {
-    tier = storyData.length - 1;
-  }
+  if (tier >= storyData.length) tier = storyData.length - 1;
   pendingStoryTier = tier;
   storyTitle.innerHTML = storyData[tier].title;
   storyText.innerHTML = storyData[tier].text;
@@ -96,11 +76,8 @@ function showStory(tier) {
 storyNextBtn.onclick = () => {
   playSFX('click');
   storyModal.style.display = 'none';
-  if (pendingStoryTier >= storyData.length - 1) {
-    endGame();
-  } else {
-    startNextBiome(pendingStoryTier);
-  }
+  if (pendingStoryTier >= storyData.length - 1) endGame();
+  else startNextBiome(pendingStoryTier);
 };
 
 function startNextBiome(tier) {
@@ -114,15 +91,9 @@ function startNextBiome(tier) {
     updateShopUI(); 
   }
 
-  obstaclesContainer.innerHTML = '';
-  coinsContainer.innerHTML = '';
-  powerupsContainer.innerHTML = '';
-  bossProjectiles.forEach(p => p.el.remove()); bossProjectiles = [];
-  droneProjectiles.forEach(p => p.el.remove()); droneProjectiles = [];
-
+  clearEntities();
   yPosition = 0; yVelocity = 0; isGrounded = true;
   player.style.bottom = '0px';
-  
   spawnObstacleTimer = 0; spawnCoinTimer = 0; spawnPowerupTimer = 0;
   invincibleUntil = Date.now() + 2000;
 
@@ -165,17 +136,11 @@ let isDailyMode=false;
 
 let hasShield=false;
 let hasDoubleJump=false;
-
 let playerName = localStorage.getItem('dino_player_name') || '';
 let pendingScore = null;
 
-let comboCount = 0;
-let comboTimer = 0;
-let comboMultiplier = 1;
-
-let powerupsOnScreen = [];
-let weatherParticles = [];
-let weatherSpawnTimer = 0;
+let comboCount = 0, comboTimer = 0, comboMultiplier = 1;
+let weatherParticles = [], weatherSpawnTimer = 0;
 
 let skill_f_dmg = localStorage.getItem('skill_f_dmg')==='true';
 let skill_f_hp = localStorage.getItem('skill_f_hp')==='true';
@@ -206,22 +171,38 @@ const skinList=[
   {id:'ptero', icon:'🦇', name:'Птеродактиль', price:200, hp:1, jumpMul:1.35, desc:'Прыжок x1.35'}
 ];
 
+// БОСС
 let isBossActive=false;
 let bossHP=0, maxBossHP=3;
 let bossTime=0, bossShootTimer=0;
 let bossElement=null;
-let bossProjectiles=[];
+let bX = 0, bY = 0; // Координаты босса
 let nextBossScore=300;
 
+// ПИТОМЦЫ
 let petX=100, petY=100, dogX=50, dogY=0;
-let droneShootTimer=0, droneProjectiles=[];
+let droneShootTimer=0;
 
+// ФИЗИКА И HP
 let currentHP=1, maxHP=1;
 let invincibleUntil=0;
+let yPosition=0, yVelocity=0, isGrounded=true;
+let jumpCount=0;
+let spawnObstacleTimer=0, spawnCoinTimer=0, spawnPowerupTimer=0;
+let nextEventTime=0, currentEvent=null, lastEventType=null;
 
-let nextEventTime=0;
-let currentEvent=null;
-let lastEventType=null;
+// МАССИВЫ СУЩНОСТЕЙ (для оптимизации)
+let obstacleEntities = [];
+let coinEntities = [];
+let powerupsOnScreen = [];
+let meteorEntities = [];
+let bossProjectileEntities = [];
+let droneProjectileEntities = [];
+
+// ХИТБОКС ИГРОКА (Вместо 80x80, мы используем точный 50x50 в центре)
+const HITBOX_X = 65; // 50px (позиция CSS) + 15px отступ
+const HITBOX_W = 50;
+const HITBOX_H = 50;
 
 let quests=[
   {id:'jump', text:'Прыгни 10 раз', target:10, current:0, reward:5, done:false},
@@ -230,14 +211,30 @@ let quests=[
   {id:'boss', text:'Убей 1 Босса', target:1, current:0, reward:50, done:false}
 ];
 
-let yPosition=0, yVelocity=0, isGrounded=true;
-let jumpCount=0;
-let spawnObstacleTimer=0, spawnCoinTimer=0, spawnPowerupTimer=0;
-
 let highScore=parseInt(localStorage.getItem('dino_highscore'))||0;
 highScoreDisplay.textContent=`HI ${String(highScore).padStart(5,'0')}`;
 coinsDisplay.textContent=`🪙 ${coins}`;
 dnaDisplay.textContent=`🧬 ${dna}`;
+
+// --- МАТЕМАТИЧЕСКАЯ КОЛЛИЗИЯ (БЕЗ ЛАГОВ) ---
+function checkAABB(x1, y1, w1, h1, x2, y2, w2, h2) {
+  // Небольшой отступ для прощения (на телефоне меньше)
+  const pad = window.innerWidth < 900 ? 3 : 6; 
+  return !(x1 + pad > x2 + w2 - pad || 
+           x1 + w1 - pad < x2 + pad || 
+           y1 + pad > y2 + h2 - pad || 
+           y1 + h1 - pad < y2 + pad);
+}
+
+// --- ОЧИСТКА СУЩНОСТЕЙ ---
+function clearEntities() {
+  obstacleEntities.forEach(e => e.el.remove()); obstacleEntities = [];
+  coinEntities.forEach(e => e.el.remove()); coinEntities = [];
+  powerupsOnScreen.forEach(e => e.el.remove()); powerupsOnScreen = [];
+  meteorEntities.forEach(e => e.el.remove()); meteorEntities = [];
+  bossProjectileEntities.forEach(e => e.el.remove()); bossProjectileEntities = [];
+  droneProjectileEntities.forEach(e => e.el.remove()); droneProjectileEntities = [];
+}
 
 // --- УВЕДОМЛЕНИЯ ---
 function showToast(msg, isBoss=false){
@@ -258,122 +255,73 @@ async function loadLeaderboard(){
   } catch { leaderboardList.innerHTML='<span style="color:#ff2a2a">Сервер недоступен ❌</span>'; }
 }
 async function sendScore(name, sc){
-  try{
-    await fetch(`${API_BASE}/api/score`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,score:sc})});
-    loadLeaderboard();
-  }catch(e){console.error(e);}
+  try{ await fetch(`${API_BASE}/api/score`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,score:sc})}); loadLeaderboard(); }catch(e){console.error(e);}
 }
-
 async function loadProfileFromServer(){
   if (!playerName) return;
   try {
-    const r = await fetch(`${API_BASE}/api/player/load`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({name: playerName})
-    });
+    const r = await fetch(`${API_BASE}/api/player/load`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name: playerName}) });
     const d = await r.json();
     if (d.coins > coins) { coins = d.coins; localStorage.setItem('dino_coins', coins); }
     if (d.selected_skin && d.selected_skin !== 'trike') { selectedSkin = d.selected_skin; localStorage.setItem('dino_selected_skin', selectedSkin); }
     if (d.unlocked_skins) {
       try {
         const arr = JSON.parse(d.unlocked_skins);
-        if (Array.isArray(arr)) {
-          arr.forEach(s => { if (!unlockedSkins.includes(s) && s !== 'trike') unlockedSkins.push(s); });
-          localStorage.setItem('dino_unlocked_skins', JSON.stringify(unlockedSkins));
-        }
+        if (Array.isArray(arr)) { arr.forEach(s => { if (!unlockedSkins.includes(s) && s !== 'trike') unlockedSkins.push(s); }); localStorage.setItem('dino_unlocked_skins', JSON.stringify(unlockedSkins)); }
       } catch {}
     }
     updateShopUI(); renderSkins(); updatePlayerSkin();
   } catch(e) { console.error('Profile load failed', e); }
 }
-
 async function saveProfileToServer(){
   if (!playerName) return;
   try {
-    await fetch(`${API_BASE}/api/player/save`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        name: playerName,
-        coins: coins,
-        quests_done: quests.filter(q=>q.done).length,
-        selected_skin: selectedSkin,
-        unlocked_skins: JSON.stringify(unlockedSkins)
-      })
-    });
+    await fetch(`${API_BASE}/api/player/save`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: playerName, coins: coins, quests_done: quests.filter(q=>q.done).length, selected_skin: selectedSkin, unlocked_skins: JSON.stringify(unlockedSkins) }) });
   } catch(e) { console.error('Profile save failed', e); }
 }
-
 async function claimDailyReward(){
   if (!playerName) { showToast('⚠️ Сначала сохраните имя рекорда'); return; }
   try {
-    const r = await fetch(`${API_BASE}/api/player/daily`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({name: playerName})
-    });
+    const r = await fetch(`${API_BASE}/api/player/daily`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name: playerName}) });
     const d = await r.json();
-    if (d.status === 'already_claimed') {
-      showToast(`🔥 Награда уже получена сегодня\nСерия: ${d.streak} 🔥`);
-    } else if (d.status === 'success') {
-      coins = d.coins;
-      localStorage.setItem('dino_coins', coins);
-      coinsDisplay.textContent = `🪙 ${coins}`;
-      updateShopUI();
-      playSFX('buy');
-      showToast(`🔥 ЕЖЕДНЕВНАЯ НАГРАДА!\n+${d.reward} 🪙\nСерия: ${d.streak} 🔥`);
-    }
+    if (d.status === 'already_claimed') { showToast(`🔥 Награда уже получена сегодня\nСерия: ${d.streak} 🔥`); }
+    else if (d.status === 'success') { coins = d.coins; localStorage.setItem('dino_coins', coins); coinsDisplay.textContent = `🪙 ${coins}`; updateShopUI(); playSFX('buy'); showToast(`🔥 ЕЖЕДНЕВНАЯ НАГРАДА!\n+${d.reward} 🪙\nСерия: ${d.streak} 🔥`); }
   } catch(e) { showToast('❌ Сервер недоступен'); }
 }
 
 // --- ИМЯ ИГРОКА ---
 function updateNameUI(){
-  if (playerName) {
-    playerNameInput.style.display = 'none';
-    saveRecordBtn.style.display = 'none';
-  } else {
+  if (playerName) { playerNameInput.style.display = 'none'; saveRecordBtn.style.display = 'none'; }
+  else {
     playerNameInput.style.display = 'block';
     saveRecordBtn.style.display = (pendingScore !== null) ? 'inline-block' : 'none';
-    if (pendingScore !== null) {
-      playerNameInput.placeholder = `Ваш счёт: ${pendingScore}. Введите имя!`;
-    }
+    if (pendingScore !== null) playerNameInput.placeholder = `Ваш счёт: ${pendingScore}. Введите имя!`;
   }
 }
-
 saveRecordBtn.onclick = () => {
   const v = playerNameInput.value.trim().slice(0,20);
   if (!v) { showToast('⚠️ Введите имя!'); return; }
-  playerName = v;
-  localStorage.setItem('dino_player_name', playerName);
-  playerNameInput.value = '';
-  playerNameInput.style.display = 'none';
-  saveRecordBtn.style.display = 'none';
-  playSFX('buy');
-  showToast(`✅ Имя сохранено: ${playerName}`);
-  if (pendingScore !== null) {
-    sendScore(playerName, pendingScore);
-    pendingScore = null;
-  }
+  playerName = v; localStorage.setItem('dino_player_name', playerName);
+  playerNameInput.value = ''; playerNameInput.style.display = 'none'; saveRecordBtn.style.display = 'none';
+  playSFX('buy'); showToast(`✅ Имя сохранено: ${playerName}`);
+  if (pendingScore !== null) { sendScore(playerName, pendingScore); pendingScore = null; }
   loadProfileFromServer();
 };
 
 // --- КЛАССЫ ---
 function getClassStats(){
   const c = skinList.find(s=>s.id===selectedSkin) || skinList[0];
-  let hp = c.hp;
-  if (skill_f_hp) hp += 1;
-  let jumpMul = c.jumpMul;
-  if (skill_a_jump) jumpMul *= 1.2;
+  let hp = c.hp; if (skill_f_hp) hp += 1;
+  let jumpMul = c.jumpMul; if (skill_a_jump) jumpMul *= 1.2;
   return { hp, jumpMul, classId: c.id };
 }
-
 function updatePlayerSkin(){
   player.classList.remove('skin-raptor','skin-ptero');
   player.style.backgroundImage = ""; 
-  
   if (selectedSkin==='default') player.style.backgroundImage="url('player.png')";
   else if (selectedSkin==='raptor') player.classList.add('skin-raptor');
   else if (selectedSkin==='ptero') player.classList.add('skin-ptero');
 }
-
 function renderSkins(){
   skinsGrid.innerHTML='';
   skinList.forEach(skin=>{
@@ -391,492 +339,260 @@ function renderSkins(){
 }
 
 // --- ДЕРЕВО НАВЫКОВ ---
-const skillDefs = {
-  f_dmg: { cost:30, name:'Урон x2 (Пассив)' },
-  f_hp: { cost:50, name:'+1 жизнь' },
-  a_jump: { cost:30, name:'Прыжок+' },
-  a_magnet: { cost:50, name:'Магнит+' },
-  l_coin: { cost:30, name:'Монеты x2' },
-  l_event: { cost:50, name:'Удача' }
-};
-
+const skillDefs = { f_dmg: { cost:30, name:'Урон x2' }, f_hp: { cost:50, name:'+1 жизнь' }, a_jump: { cost:30, name:'Прыжок+' }, a_magnet: { cost:50, name:'Магнит+' }, l_coin: { cost:30, name:'Монеты x2' }, l_event: { cost:50, name:'Удача' } };
 function renderSkills(){
   document.querySelectorAll('.skill-btn').forEach(btn=>{
-    const id=btn.dataset.id;
-    const purchased = localStorage.getItem('skill_'+id)==='true';
-    const def = skillDefs[id];
+    const id=btn.dataset.id; const purchased = localStorage.getItem('skill_'+id)==='true'; const def = skillDefs[id];
     if (purchased){ btn.disabled=true; btn.classList.add('purchased'); btn.innerHTML=`✅ ${def.name}<br><small>КУПЛЕНО</small>`; }
     else { btn.disabled = dna < def.cost; btn.innerHTML=`${def.name}<br><small>${def.cost} 🧬</small>`; }
   });
 }
-
 document.querySelectorAll('.skill-btn').forEach(btn=>{
   btn.onclick = ()=>{
-    const id=btn.dataset.id;
-    const def=skillDefs[id];
+    const id=btn.dataset.id; const def=skillDefs[id];
     if (dna>=def.cost && localStorage.getItem('skill_'+id)!=='true'){
-      dna -= def.cost;
-      localStorage.setItem('dino_dna', dna);
-      localStorage.setItem('skill_'+id, 'true');
-      if (id==='f_dmg') skill_f_dmg=true;
-      if (id==='f_hp') skill_f_hp=true;
-      if (id==='a_jump') skill_a_jump=true;
-      if (id==='a_magnet') skill_a_magnet=true;
-      if (id==='l_coin') skill_l_coin=true;
-      if (id==='l_event') skill_l_event=true;
-      playSFX('buy');
-      dnaDisplay.textContent=`🧬 ${dna}`;
-      renderSkills();
+      dna -= def.cost; localStorage.setItem('dino_dna', dna); localStorage.setItem('skill_'+id, 'true');
+      if (id==='f_dmg') skill_f_dmg=true; if (id==='f_hp') skill_f_hp=true; if (id==='a_jump') skill_a_jump=true; if (id==='a_magnet') skill_a_magnet=true; if (id==='l_coin') skill_l_coin=true; if (id==='l_event') skill_l_event=true;
+      playSFX('buy'); dnaDisplay.textContent=`🧬 ${dna}`; renderSkills();
     }
   };
 });
-
 skillBtn.onclick = ()=>{ playSFX('click'); renderSkills(); skillModal.style.display='block'; };
 
 // --- МАГАЗИН ---
 function updateShopUI(){
-  coinsDisplay.textContent=`🪙 ${coins}`;
-  dnaDisplay.textContent=`🧬 ${dna}`;
+  coinsDisplay.textContent=`🪙 ${coins}`; dnaDisplay.textContent=`🧬 ${dna}`;
   [['glasses',buyGlassesBtn,15,activeGlasses,hasGlasses],['shoes',buyShoesBtn,30,activeShoes,hasShoes],['magnet',buyMagnetBtn,50,activeMagnet,hasMagnet],['pet',buyPetBtn,200,activePet,hasPet],['dog',buyDogBtn,300,activeDog,hasDog]].forEach(([id,btn,price,active,owned])=>{
     if (!owned){ btn.querySelector('.price').textContent=`🪙 ${price}`; btn.classList.remove('inactive'); }
     else { btn.querySelector('.price').textContent = active?'ВКЛ':'ВЫКЛ'; btn.classList.toggle('inactive', !active); }
   });
   for(let i=0;i<=unlockedBiome;i++){ if(startBiomeSelect.options[i]) startBiomeSelect.options[i].disabled=false; }
-  petDrone.style.display = activePet ? 'block':'none';
-  petDog.style.display = activeDog ? 'block':'none';
+  petDrone.style.display = activePet ? 'block':'none'; petDog.style.display = activeDog ? 'block':'none';
 }
-
 function setupShopBtn(btn, key, price){
   btn.onclick = ()=>{
-    let has = localStorage.getItem('dino_'+key)==='true';
-    let active = has && localStorage.getItem('dino_'+key+'_active')!=='false';
-    if (!has){
-      if (coins>=price){ coins-=price; localStorage.setItem('dino_coins',coins); localStorage.setItem('dino_'+key,'true'); localStorage.setItem('dino_'+key+'_active','true'); playSFX('buy'); saveProfileToServer(); }
-    } else { active=!active; localStorage.setItem('dino_'+key+'_active',active); playSFX('click'); }
-    if(key==='glasses'){hasGlasses=has||true;activeGlasses=active;}
-    if(key==='shoes'){hasShoes=has||true;activeShoes=active;}
-    if(key==='magnet'){hasMagnet=has||true;activeMagnet=active;}
-    if(key==='pet'){hasPet=has||true;activePet=active;}
-    if(key==='dog'){hasDog=has||true;activeDog=active;}
+    let has = localStorage.getItem('dino_'+key)==='true'; let active = has && localStorage.getItem('dino_'+key+'_active')!=='false';
+    if (!has){ if (coins>=price){ coins-=price; localStorage.setItem('dino_coins',coins); localStorage.setItem('dino_'+key,'true'); localStorage.setItem('dino_'+key+'_active','true'); playSFX('buy'); saveProfileToServer(); } }
+    else { active=!active; localStorage.setItem('dino_'+key+'_active',active); playSFX('click'); }
+    if(key==='glasses'){hasGlasses=has||true;activeGlasses=active;} if(key==='shoes'){hasShoes=has||true;activeShoes=active;}
+    if(key==='magnet'){hasMagnet=has||true;activeMagnet=active;} if(key==='pet'){hasPet=has||true;activePet=active;} if(key==='dog'){hasDog=has||true;activeDog=active;}
     updateShopUI();
   };
 }
-setupShopBtn(buyGlassesBtn,'glasses',15);
-setupShopBtn(buyShoesBtn,'shoes',30);
-setupShopBtn(buyMagnetBtn,'magnet',50);
-setupShopBtn(buyPetBtn,'pet',200);
-setupShopBtn(buyDogBtn,'dog',300);
-
+setupShopBtn(buyGlassesBtn,'glasses',15); setupShopBtn(buyShoesBtn,'shoes',30); setupShopBtn(buyMagnetBtn,'magnet',50); setupShopBtn(buyPetBtn,'pet',200); setupShopBtn(buyDogBtn,'dog',300);
 closeBtns.forEach(b=>b.onclick=()=>{ playSFX('click'); skillModal.style.display='none'; skinsModal.style.display='none'; });
 skinsBtn.onclick=()=>{ playSFX('click'); renderSkins(); skinsModal.style.display='block'; };
 dailyChallengeBtn.onclick=()=>{ playSFX('click'); claimDailyReward(); };
-
-// --- СТОЛКНОВЕНИЯ ---
-function checkCollision(a,b){
-  const r1=a.getBoundingClientRect(), r2=b.getBoundingClientRect();
-  const p = window.innerWidth<900?8:12;
-  return !(r1.right-p<r2.left+p || r1.left+p>r2.right-p || r1.bottom-p<r2.top+p || r1.top+p>r2.bottom-p);
-}
 
 // --- СОБАЧКА ---
 function updateDog(){
   if (!activeDog) return;
   petDog.style.display = 'block';
-  const targetX = 100;
-  const targetY = 10;
-  dogX += (targetX - dogX) * 0.05;
-  dogY += (targetY - dogY) * 0.1;
-  petDog.style.left = dogX + 'px';
-  petDog.style.bottom = dogY + 'px';
+  dogX += (100 - dogX) * 0.05; dogY += (10 - dogY) * 0.1;
+  petDog.style.left = dogX + 'px'; petDog.style.bottom = dogY + 'px';
   
-  document.querySelectorAll('.coin').forEach(coin=>{
-    if (checkCollision(petDog, coin)){
-      coin.remove();
-      playSFX('coin');
-      addCombo();
+  for (let i = coinEntities.length - 1; i >= 0; i--) {
+    let c = coinEntities[i];
+    if (checkAABB(dogX, dogY, 30, 30, c.x, c.y, c.w, c.h)) {
+      c.el.remove(); coinEntities.splice(i, 1);
+      playSFX('coin'); addCombo();
       let reward = Math.round((activeGlasses?2:1) * (skill_l_coin?2:1) * comboMultiplier);
-      coins += reward;
-      coinsDisplay.textContent = `🪙 ${coins}`;
-      const q = quests.find(x=>x.id==='coin'); 
-      if(q&&!q.done){q.current++; updateQuestProgress('coin'); checkQuestComplete('coin');}
+      coins += reward; coinsDisplay.textContent = `🪙 ${coins}`;
+      const q = quests.find(x=>x.id==='coin'); if(q&&!q.done){q.current++; updateQuestProgress('coin'); checkQuestComplete('coin');}
     }
-  });
+  }
 }
 
 // --- СОБЫТИЯ ---
 function triggerRandomEvent(){
   if (currentEvent) return;
-  
   const rand = Math.random();
-  let type = 'meteor';
-  if (rand > 0.7) type = 'goldrush';
-  else if (rand > 0.4) type = 'frenzy';
-
-  if (type === lastEventType) {
-      const otherEvents = ['meteor', 'goldrush', 'frenzy'].filter(e => e !== type);
-      type = otherEvents[Math.floor(Math.random() * otherEvents.length)];
-  }
-  lastEventType = type;
-  currentEvent = type;
+  let type = rand > 0.7 ? 'goldrush' : (rand > 0.4 ? 'frenzy' : 'meteor');
+  if (type === lastEventType) { const other = ['meteor', 'goldrush', 'frenzy'].filter(e => e !== type); type = other[Math.floor(Math.random() * other.length)]; }
+  lastEventType = type; currentEvent = type;
   
   if (type==='meteor'){
-    eventBanner.textContent = '☄️ МЕТЕОРИТНЫЙ ДОЖДЬ!';
-    eventBanner.style.color = '#ff8c00';
-    eventBanner.style.display = 'block';
-    for(let i=0;i<15;i++){
-      setTimeout(()=>{
-        if (!isGameRunning) return;
-        const m = document.createElement('div');
-        m.className = 'meteor';
-        m.style.width='25px'; m.style.height='25px';
-        m.style.left = (Math.random()*(gameContainer.offsetWidth-30))+'px';
-        m.style.bottom = gameContainer.offsetHeight+'px';
-        obstaclesContainer.appendChild(m);
-        let b = gameContainer.offsetHeight;
-        const interval = setInterval(()=>{
-          b -= 8;
-          m.style.bottom = b+'px';
-          if (b < 0 || !isGameRunning){ clearInterval(interval); m.remove(); return; }
-          if (checkCollision(player,m)){ clearInterval(interval); m.remove(); takeDamage(); }
-        }, 30);
-      }, i*200);
-    }
-    setTimeout(()=>{ 
-        currentEvent=null; 
-        eventBanner.style.display='none'; 
-        nextEventTime = Date.now() + (skill_l_event ? 30000 : 60000);
-    }, 5000);
+    eventBanner.textContent = '☄️ МЕТЕОРИТНЫЙ ДОЖДЬ!'; eventBanner.style.color = '#ff8c00'; eventBanner.style.display = 'block';
+    let meteorCount = 0;
+    const meteorInterval = setInterval(() => {
+      if (!isGameRunning || meteorCount >= 15) { clearInterval(meteorInterval); return; }
+      let m = document.createElement('div'); m.className = 'meteor';
+      let mx = Math.random()*(gameContainer.offsetWidth-30); let my = gameContainer.offsetHeight;
+      m.style.width='25px'; m.style.height='25px'; m.style.left = mx+'px'; m.style.bottom = my+'px';
+      obstaclesContainer.appendChild(m);
+      meteorEntities.push({ el: m, x: mx, y: my, w: 25, h: 25 });
+      meteorCount++;
+    }, 200);
+    setTimeout(()=>{ currentEvent=null; eventBanner.style.display='none'; nextEventTime = Date.now() + (skill_l_event ? 30000 : 60000); }, 5000);
   } else if (type==='goldrush'){
-    eventBanner.textContent = '🪙 ЗОЛОТАЯ ЛИХОРАДКА!';
-    eventBanner.style.color = '#ffd700';
-    eventBanner.style.display = 'block';
-    for(let i=0;i<15;i++){
-      setTimeout(()=>{
-        if (!isGameRunning) return;
-        spawnCoin();
-      }, i*150);
-    }
-    setTimeout(()=>{ 
-        currentEvent=null; 
-        eventBanner.style.display='none'; 
-        nextEventTime = Date.now() + (skill_l_event ? 30000 : 60000); 
-    }, 4000);
+    eventBanner.textContent = '🪙 ЗОЛОТАЯ ЛИХОРАДКА!'; eventBanner.style.color = '#ffd700'; eventBanner.style.display = 'block';
+    for(let i=0;i<15;i++){ setTimeout(()=>{ if (!isGameRunning) return; spawnCoin(); }, i*150); }
+    setTimeout(()=>{ currentEvent=null; eventBanner.style.display='none'; nextEventTime = Date.now() + (skill_l_event ? 30000 : 60000); }, 4000);
   } else {
-    eventBanner.textContent = '⚡ БЕЗУМНАЯ СКОРОСТЬ!';
-    eventBanner.style.color = '#ff00ff';
-    eventBanner.style.display = 'block';
-    setTimeout(()=>{ 
-        currentEvent=null; 
-        eventBanner.style.display='none'; 
-        nextEventTime = Date.now() + (skill_l_event ? 30000 : 60000); 
-    }, 5000);
+    eventBanner.textContent = '⚡ БЕЗУМНАЯ СКОРОСТЬ!'; eventBanner.style.color = '#ff00ff'; eventBanner.style.display = 'block';
+    setTimeout(()=>{ currentEvent=null; eventBanner.style.display='none'; nextEventTime = Date.now() + (skill_l_event ? 30000 : 60000); }, 5000);
   }
 }
 
 // --- HP / УРОН ---
 function takeDamage(){
   if (Date.now() < invincibleUntil) return;
-
-  if (hasShield){ 
-    hasShield=false; 
-    removeBuffIcon('shield');
-    playSFX('death'); 
-    gameContainer.classList.add('shake'); 
-    setTimeout(()=>gameContainer.classList.remove('shake'),300); 
-    invincibleUntil = Date.now()+1000; 
-    return; 
-  }
-  
+  if (hasShield){ hasShield=false; removeBuffIcon('shield'); playSFX('death'); gameContainer.classList.add('shake'); setTimeout(()=>gameContainer.classList.remove('shake'),300); invincibleUntil = Date.now()+1000; return; }
   currentHP--;
-  
-  if (livesDisplay) {
-      livesDisplay.innerHTML = '❤️'.repeat(Math.max(0, currentHP));
-  }
-
+  if (livesDisplay) livesDisplay.innerHTML = '❤️'.repeat(Math.max(0, currentHP));
   if (currentHP<=0){ endGame(); return; }
-  
-  invincibleUntil = Date.now()+1500;
-  playSFX('death');
-  gameContainer.classList.add('shake');
-  setTimeout(()=>gameContainer.classList.remove('shake'),300);
+  invincibleUntil = Date.now()+1500; playSFX('death'); gameContainer.classList.add('shake'); setTimeout(()=>gameContainer.classList.remove('shake'),300);
 }
 
 // --- БАФФЫ ---
 function addBuffIcon(type){
-  const el = document.createElement('div');
-  el.className = 'buff-icon';
-  el.dataset.buffType = type;
-  el.textContent = type === 'shield' ? '🛡️' : '⚡';
-  el.style.color = type === 'shield' ? '#00ffff' : '#ff00ff';
+  const el = document.createElement('div'); el.className = 'buff-icon'; el.dataset.buffType = type;
+  el.textContent = type === 'shield' ? '🛡️' : '⚡'; el.style.color = type === 'shield' ? '#00ffff' : '#ff00ff';
   activeBuffsUI.appendChild(el);
 }
-function removeBuffIcon(type){
-  const el = activeBuffsUI.querySelector(`[data-buff-type="${type}"]`);
-  if (el) el.remove();
-}
+function removeBuffIcon(type){ const el = activeBuffsUI.querySelector(`[data-buff-type="${type}"]`); if (el) el.remove(); }
 
 // --- ПАУЭРАПЫ ---
 function spawnPowerup(){
   if (powerupsOnScreen.length >= 2) return;
   const type = Math.random() < 0.5 ? 'shield' : 'megajump';
-  const p = document.createElement('div');
-  p.className = `powerup ${type}`;
-  p.textContent = type === 'shield' ? '🛡️' : '⚡';
-  p.style.left = gameContainer.offsetWidth + 'px';
-  p.style.bottom = (Math.floor(Math.random()*80)+40)+'px'; 
+  const p = document.createElement('div'); p.className = `powerup ${type}`; p.textContent = type === 'shield' ? '🛡️' : '⚡';
+  let px = gameContainer.offsetWidth; let py = (Math.floor(Math.random()*80)+40);
+  p.style.left = px + 'px'; p.style.bottom = py + 'px';
   powerupsContainer.appendChild(p);
-  powerupsOnScreen.push({el:p, type});
-}
-
-function updatePowerups(speed){
-  for (let i = powerupsOnScreen.length - 1; i >= 0; i--) {
-    const p = powerupsOnScreen[i];
-    let x = parseFloat(p.el.style.left) - speed;
-    p.el.style.left = x + 'px';
-    if (checkCollision(player, p.el)) {
-      if (p.type === 'shield') { hasShield = true; addBuffIcon('shield'); }
-      else { hasDoubleJump = true; addBuffIcon('megajump'); }
-      playSFX('buy');
-      p.el.remove();
-      powerupsOnScreen.splice(i, 1);
-    } else if (x < -50) {
-      p.el.remove();
-      powerupsOnScreen.splice(i, 1);
-    }
-  }
+  powerupsOnScreen.push({ el: p, x: px, y: py, w: 34, h: 34, type: type });
 }
 
 // --- ПОГОДА ---
 const weatherTypeByBiome = ['sand', 'leaf', 'snow', 'spark', 'matrix'];
-
 function spawnWeatherParticle(){
   const type = weatherTypeByBiome[currentBiomeTier] || 'snow';
-  const p = document.createElement('div');
-  p.className = `weather-particle weather-${type}`;
+  const p = document.createElement('div'); p.className = `weather-particle weather-${type}`;
   const startY = Math.random() * gameContainer.offsetHeight * 0.85;
-  p.style.left = (gameContainer.offsetWidth + 10) + 'px';
-  p.style.top = startY + 'px';
+  p.style.left = (gameContainer.offsetWidth + 10) + 'px'; p.style.top = startY + 'px';
   cloudsContainer.appendChild(p);
-  
-  const vx = 4 + Math.random() * 4; 
-  const vy = (type === 'snow') ? (1 + Math.random()) : (type === 'spark' ? -0.8 : 0);
-  
+  const vx = 4 + Math.random() * 4; const vy = (type === 'snow') ? (1 + Math.random()) : (type === 'spark' ? -0.8 : 0);
   weatherParticles.push({el:p, x: gameContainer.offsetWidth + 10, y: startY, vx, vy});
 }
-
 function updateWeather(){
   weatherSpawnTimer++;
-  const threshold = window.innerWidth < 900 ? 12 : 10;
+  const threshold = window.innerWidth < 900 ? 15 : 10; // на мобилках реже
   if (weatherSpawnTimer > threshold) {
     spawnWeatherParticle();
     if (currentBiomeTier === 3 && Math.random() < 0.5) {
-      const p = document.createElement('div');
-      p.className = 'weather-particle weather-ash';
+      const p = document.createElement('div'); p.className = 'weather-particle weather-ash';
       const sy = Math.random() * gameContainer.offsetHeight * 0.85;
-      p.style.left = (gameContainer.offsetWidth + 10) + 'px';
-      p.style.top = sy + 'px';
+      p.style.left = (gameContainer.offsetWidth + 10) + 'px'; p.style.top = sy + 'px';
       cloudsContainer.appendChild(p);
       weatherParticles.push({el:p, x: gameContainer.offsetWidth + 10, y: sy, vx: 2 + Math.random()*2, vy: 1.5 + Math.random()});
     }
     weatherSpawnTimer = 0;
   }
-  
   for (let i = weatherParticles.length - 1; i >= 0; i--) {
     const p = weatherParticles[i];
-    p.x -= p.vx;
-    p.y += p.vy;
-    p.el.style.left = p.x + 'px';
-    p.el.style.top = p.y + 'px';
-    if (p.x < -30 || p.y > gameContainer.offsetHeight + 20 || p.y < -30) {
-      p.el.remove();
-      weatherParticles.splice(i, 1);
-    }
+    p.x -= p.vx; p.y += p.vy; p.el.style.left = p.x + 'px'; p.el.style.top = p.y + 'px';
+    if (p.x < -30 || p.y > gameContainer.offsetHeight + 20 || p.y < -30) { p.el.remove(); weatherParticles.splice(i, 1); }
   }
 }
 
 // --- КОМБО ---
 function addCombo(){
-  comboCount++;
-  comboTimer = Date.now() + 2500;
+  comboCount++; comboTimer = Date.now() + 2500;
   comboMultiplier = 1 + Math.floor(comboCount / 5) * 0.5;
   if (comboCount >= 3) {
-    comboDisplay.style.display = 'block';
-    comboDisplay.textContent = `COMBO x${comboMultiplier.toFixed(1)}!`;
-    comboDisplay.style.animation = 'none';
-    void comboDisplay.offsetWidth;
-    comboDisplay.style.animation = 'pop 0.3s ease-out';
+    comboDisplay.style.display = 'block'; comboDisplay.textContent = `COMBO x${comboMultiplier.toFixed(1)}!`;
+    comboDisplay.style.animation = 'none'; void comboDisplay.offsetWidth; comboDisplay.style.animation = 'pop 0.3s ease-out';
   }
 }
-
-function resetCombo(){
-  comboCount = 0;
-  comboMultiplier = 1;
-  comboDisplay.style.display = 'none';
-}
+function resetCombo(){ comboCount = 0; comboMultiplier = 1; comboDisplay.style.display = 'none'; }
 
 // --- БОСС ---
 function killBoss(){
   if (!bossElement) return;
   bossElement.remove(); bossElement=null;
-  bossProjectiles.forEach(p=>p.el.remove()); bossProjectiles=[];
-  droneProjectiles.forEach(p=>p.el.remove()); droneProjectiles=[];
-  bossHpContainer.style.display='none';
-  isBossActive=false;
-  
-  const bq = quests.find(q=>q.id==='boss'); 
-  if(bq){bq.current++; updateQuestProgress('boss'); checkQuestComplete('boss');}
-  
-  invincibleUntil = Date.now() + 2000; // ДАЕМ 2 СЕКУНДЫ НЕУЯЗВИМОСТИ ПОСЛЕ БОССА
-  
+  bossProjectileEntities.forEach(p=>p.el.remove()); bossProjectileEntities=[];
+  droneProjectileEntities.forEach(p=>p.el.remove()); droneProjectileEntities=[];
+  bossHpContainer.style.display='none'; isBossActive=false;
+  const bq = quests.find(q=>q.id==='boss'); if(bq){bq.current++; updateQuestProgress('boss'); checkQuestComplete('boss');}
+  invincibleUntil = Date.now() + 2000;
   currentBiomeTier++; 
-  if (currentBiomeTier > 4) {
-    showStory(5); 
-  } else {
-    showStory(currentBiomeTier); 
-  }
+  if (currentBiomeTier > 4) showStory(5); else showStory(currentBiomeTier);
 }
 
 function spawnBoss(){
-  isBossActive=true;
-  // СБАЛАНСИРОВАННЫЕ HP (было 3,5,7,10,15)
-  const hpList=[3, 4, 5, 7, 9]; 
-  maxBossHP = hpList[currentBiomeTier]||9;
-  bossHP=maxBossHP;
-  bossHpFill.style.width='100%';
-  bossHpContainer.style.display='block';
-  obstaclesContainer.innerHTML='';
-  bossTime=0; bossShootTimer=0;
-  bossElement=document.createElement('div');
-  bossElement.className='boss';
-  bossElement.style.left='100%';
-  bossContainer.appendChild(bossElement);
-  bossName.textContent=`БОСС БИОМА ${currentBiomeTier+1}`;
+  isBossActive=true; const hpList=[3, 4, 5, 7, 9]; maxBossHP = hpList[currentBiomeTier]||9; bossHP=maxBossHP;
+  bossHpFill.style.width='100%'; bossHpContainer.style.display='block';
+  obstaclesContainer.innerHTML=''; bossTime=0; bossShootTimer=0;
+  bossElement=document.createElement('div'); bossElement.className='boss'; bossElement.style.left='100%';
+  bossContainer.appendChild(bossElement); bossName.textContent=`БОСС БИОМА ${currentBiomeTier+1}`;
 }
 
 function updateBoss(){
   if (!bossElement) return;
   bossTime += 0.015 + currentBiomeTier*0.005;
-  const cx = (gameContainer.offsetWidth/2)-45;
-  const amp = (gameContainer.offsetWidth/2)-100;
-  const bx = cx + Math.sin(bossTime)*amp;
-  const by = 40 + Math.sin(bossTime)*10;
-  bossElement.style.left = bx+'px';
-  bossElement.style.bottom = by+'px';
+  const cx = (gameContainer.offsetWidth/2)-45; const amp = (gameContainer.offsetWidth/2)-100;
+  bX = cx + Math.sin(bossTime)*amp; bY = 40 + Math.sin(bossTime)*10;
+  bossElement.style.left = bX+'px'; bossElement.style.bottom = bY+'px';
   
   bossShootTimer++;
-  // УВЕЛИЧЕНА ПАУЗА МЕЖДУ ВЫСТРЕЛАМИ (было 20-60, стало 40-80)
   const si = Math.max(40, 80-currentBiomeTier*10);
-  // УМЕНЬШЕНО КОЛИЧЕСТВО СНАРЯДОВ НА ЭКРАНЕ
   const maxP = 2+currentBiomeTier;
   
-  if (bossShootTimer>si && bossProjectiles.length<maxP){
-    bossElement.classList.add('shooting');
-    setTimeout(()=>{ if(bossElement) bossElement.classList.remove('shooting'); }, 150);
-
-    const pr=player.getBoundingClientRect(), gr=gameContainer.getBoundingClientRect();
-    const tx=pr.left-gr.left+pr.width/2, ty=pr.bottom-gr.bottom+pr.height/2;
-    // УМЕНЬШЕНА СКОРОСТЬ СНАРЯДОВ (было 4+0.8, стало 3+0.5)
+  if (bossShootTimer>si && bossProjectileEntities.length<maxP){
+    bossElement.classList.add('shooting'); setTimeout(()=>{ if(bossElement) bossElement.classList.remove('shooting'); }, 150);
+    const tx = 90, ty = yPosition + 35; // Прицел в игрока
     const sp = 3 + currentBiomeTier*0.5;
-
     const fireProjectile = (sx, sy, vx, vy) => {
       const p=document.createElement('div'); p.className='boss-projectile';
-      p.style.left=sx+'px'; p.style.bottom=sy+'px';
-      bossContainer.appendChild(p);
-      bossProjectiles.push({el:p,vx,vy,x:sx,y:sy});
+      p.style.left=sx+'px'; p.style.bottom=sy+'px'; bossContainer.appendChild(p);
+      bossProjectileEntities.push({el:p,vx,vy,x:sx,y:sy,w:20,h:20});
     };
-
-    if (currentBiomeTier === 0) {
-      const sx=bx+45, sy=by+45;
-      const dx=tx-sx, dy=ty-sy; const d=Math.sqrt(dx*dx+dy*dy)||1;
-      fireProjectile(sx, sy, (dx/d)*sp, (dy/d)*sp);
-    } 
-    else if (currentBiomeTier === 1) {
-      const sx=bx+45, sy=by+45;
-      const dx=tx-sx, dy=ty-sy; const d=Math.sqrt(dx*dx+dy*dy)||1;
-      const angle = Math.atan2(dy, dx);
-      fireProjectile(sx, sy, Math.cos(angle-0.3)*sp, Math.sin(angle-0.3)*sp);
-      fireProjectile(sx, sy, Math.cos(angle+0.3)*sp, Math.sin(angle+0.3)*sp);
-    }
-    else if (currentBiomeTier === 2) {
-      // ЛЕДЯНОЙ ЛАЗЕР: теперь летит выше и медленнее. Его МОЖНО перепрыгнуть!
-      const sx=bx, sy=by+20; // было by+45 (слишком низко)
-      fireProjectile(sx, sy, -6, 0); // было -10
-    }
-    else if (currentBiomeTier === 3) {
-      // ВУЛКАН: падает медленнее
-      const sx = tx, sy = gameContainer.offsetHeight;
-      fireProjectile(sx, sy, 0, -4); // было -6
-    }
-    else {
-      // КИБЕРПАНК: убран множитель 1.2, разброс меньше (0.3 вместо 0.4)
-      const sx=bx+45, sy=by+45;
-      const dx=tx-sx, dy=ty-sy; const d=Math.sqrt(dx*dx+dy*dy)||1;
-      const angle = Math.atan2(dy, dx);
-      fireProjectile(sx, sy, Math.cos(angle)*sp, Math.sin(angle)*sp);
-      fireProjectile(sx, sy, Math.cos(angle-0.3)*sp, Math.sin(angle-0.3)*sp);
-      fireProjectile(sx, sy, Math.cos(angle+0.3)*sp, Math.sin(angle+0.3)*sp);
-    }
+    if (currentBiomeTier === 0) { const sx=bX+45, sy=bY+45; const dx=tx-sx, dy=ty-sy; const d=Math.sqrt(dx*dx+dy*dy)||1; fireProjectile(sx, sy, (dx/d)*sp, (dy/d)*sp); } 
+    else if (currentBiomeTier === 1) { const sx=bX+45, sy=bY+45; const dx=tx-sx, dy=ty-sy; const d=Math.sqrt(dx*dx+dy*dy)||1; const angle = Math.atan2(dy, dx); fireProjectile(sx, sy, Math.cos(angle-0.3)*sp, Math.sin(angle-0.3)*sp); fireProjectile(sx, sy, Math.cos(angle+0.3)*sp, Math.sin(angle+0.3)*sp); }
+    else if (currentBiomeTier === 2) { const sx=bX, sy=bY+20; fireProjectile(sx, sy, -6, 0); }
+    else if (currentBiomeTier === 3) { fireProjectile(tx, gameContainer.offsetHeight, 0, -4); }
+    else { const sx=bX+45, sy=bY+45; const dx=tx-sx, dy=ty-sy; const d=Math.sqrt(dx*dx+dy*dy)||1; const angle = Math.atan2(dy, dx); fireProjectile(sx, sy, Math.cos(angle)*sp, Math.sin(angle)*sp); fireProjectile(sx, sy, Math.cos(angle-0.3)*sp, Math.sin(angle-0.3)*sp); fireProjectile(sx, sy, Math.cos(angle+0.3)*sp, Math.sin(angle+0.3)*sp); }
     bossShootTimer=0;
   }
   
-  for (let i=bossProjectiles.length-1;i>=0;i--){
-    const p=bossProjectiles[i];
-    p.x+=p.vx; p.y+=p.vy;
+  for (let i=bossProjectileEntities.length-1;i>=0;i--){
+    const p=bossProjectileEntities[i]; p.x+=p.vx; p.y+=p.vy;
     p.el.style.left=p.x+'px'; p.el.style.bottom=p.y+'px';
-    if (checkCollision(player,p.el)){
-      p.el.remove(); bossProjectiles.splice(i,1);
-      takeDamage();
-      if (!isGameRunning) return;
-      continue;
+    if (checkAABB(HITBOX_X, yPosition + 10, HITBOX_W, HITBOX_H, p.x, p.y, p.w, p.h)){
+      p.el.remove(); bossProjectileEntities.splice(i,1); takeDamage();
+      if (!isGameRunning) return; continue;
     }
-    if (p.y<-50||p.x<-50||p.x>gameContainer.offsetWidth+50){ p.el.remove(); bossProjectiles.splice(i,1); }
+    if (p.y<-50||p.x<-50||p.x>gameContainer.offsetWidth+50){ p.el.remove(); bossProjectileEntities.splice(i,1); }
   }
   
   if (activePet){
     petDrone.style.display='block';
-    const pr=player.getBoundingClientRect(), gr=gameContainer.getBoundingClientRect();
-    const tx=(pr.left-gr.left)+30, ty=yPosition+80;
-    petX += (tx-petX)*0.1; petY += (ty-petY)*0.1;
+    const tx=80, ty=yPosition+80; petX += (tx-petX)*0.1; petY += (ty-petY)*0.1;
     petDrone.style.left=petX+'px'; petDrone.style.bottom=petY+'px';
     droneShootTimer++;
     if (droneShootTimer>120){
-      const br=bossElement.getBoundingClientRect();
-      const bcx=br.left-gr.left+br.width/2;
-      const bcy=gameContainer.offsetHeight-(br.top-gr.top+br.height/2);
-      const pr2=document.createElement('div'); pr2.className='drone-projectile';
-      pr2.style.left=petX+'px'; pr2.style.bottom=petY+'px';
-      bossContainer.appendChild(pr2);
+      const bcx=bX+45; const bcy=bY+45;
+      const pr2=document.createElement('div'); pr2.className='drone-projectile'; pr2.style.left=petX+'px'; pr2.style.bottom=petY+'px'; bossContainer.appendChild(pr2);
       const dx=bcx-petX, dy=bcy-petY; const d=Math.sqrt(dx*dx+dy*dy)||1;
-      droneProjectiles.push({el:pr2,vx:(dx/d)*5,vy:(dy/d)*5,x:petX,y:petY});
+      droneProjectileEntities.push({el:pr2,vx:(dx/d)*5,vy:(dy/d)*5,x:petX,y:petY,w:12,h:12});
       droneShootTimer=0;
     }
-    for (let i=droneProjectiles.length-1;i>=0;i--){
-      const p=droneProjectiles[i];
-      p.x+=p.vx; p.y+=p.vy;
+    for (let i=droneProjectileEntities.length-1;i>=0;i--){
+      const p=droneProjectileEntities[i]; p.x+=p.vx; p.y+=p.vy;
       p.el.style.left=p.x+'px'; p.el.style.bottom=p.y+'px';
-      if (checkCollision(p.el,bossElement)){
-        p.el.remove(); droneProjectiles.splice(i,1);
-        bossHP -= 0.15;
-        bossHpFill.style.width=(Math.max(0,bossHP)/maxBossHP*100)+'%';
-        playSFX('boss_hit');
+      if (checkAABB(bX, bY, 90, 90, p.x, p.y, p.w, p.h)){
+        p.el.remove(); droneProjectileEntities.splice(i,1); bossHP -= 0.15;
+        bossHpFill.style.width=(Math.max(0,bossHP)/maxBossHP*100)+'%'; playSFX('boss_hit');
         if (bossHP<=0){ killBoss(); return; }
-      } else if (p.y<-50||p.x<-50||p.x>gameContainer.offsetWidth+50){ p.el.remove(); droneProjectiles.splice(i,1); }
+      } else if (p.y<-50||p.x<-50||p.x>gameContainer.offsetWidth+50){ p.el.remove(); droneProjectileEntities.splice(i,1); }
     }
   }
   
-  const pr=player.getBoundingClientRect(), br=bossElement.getBoundingClientRect();
-  if (checkCollision(player,bossElement)){
-    const bcy = br.top+br.height/2;
-    if (yVelocity<0 && pr.bottom<bcy){
-      bossHP--;
-      bossHpFill.style.width=(Math.max(0,bossHP)/maxBossHP*100)+'%';
-      playSFX('boss_hit');
-      yVelocity=12;
+  if (checkAABB(HITBOX_X, yPosition + 10, HITBOX_W, HITBOX_H, bX, bY, 90, 90)){
+    if (yVelocity<0 && (yPosition + 10 + HITBOX_H) < (bY + 45)){
+      bossHP--; bossHpFill.style.width=(Math.max(0,bossHP)/maxBossHP*100)+'%'; playSFX('boss_hit'); yVelocity=12;
       if (bossHP<=0) { killBoss(); return; }
-    } else {
-      takeDamage();
-      if (!isGameRunning) return;
-    }
+    } else { takeDamage(); if (!isGameRunning) return; }
   }
 }
 
@@ -884,19 +600,13 @@ function updateBoss(){
 function gameLoop(){
   if (!isGameRunning) return;
   
-  if (isBossActive){
-    updateBoss();
-  } else {
-    score++;
-    const cs = Math.floor(score/10);
-    scoreDisplay.textContent = String(cs).padStart(5,'0');
-    
-    const sq = quests.find(q=>q.id==='score');
-    if (sq&&!sq.done){ sq.current=cs; if (cs>=sq.target) checkQuestComplete('score'); else updateQuestProgress('score'); }
+  if (isBossActive){ updateBoss(); } 
+  else {
+    score++; const cs = Math.floor(score/10); scoreDisplay.textContent = String(cs).padStart(5,'0');
+    const sq = quests.find(q=>q.id==='score'); if (sq&&!sq.done){ sq.current=cs; if (cs>=sq.target) checkQuestComplete('score'); else updateQuestProgress('score'); }
     
     if (cs>=nextBossScore){ spawnBoss(); } else {
-      const baseSpeed = window.innerWidth<900?3:4.5;
-      let speed = isDailyMode? baseSpeed*1.5 : baseSpeed;
+      const baseSpeed = window.innerWidth<900?3:4.5; let speed = isDailyMode? baseSpeed*1.5 : baseSpeed;
       if (currentEvent==='frenzy') speed *= 1.4;
       
       spawnObstacleTimer++; if (spawnObstacleTimer>100){ spawnObstacle(); spawnObstacleTimer=0; }
@@ -904,68 +614,61 @@ function gameLoop(){
       spawnPowerupTimer++; if (spawnPowerupTimer>600){ spawnPowerup(); spawnPowerupTimer=0; }
       
       if (Date.now() > nextEventTime && !currentEvent){
-        const chance = skill_l_event ? 0.9 : 0.5;
-        if (Math.random()<chance) {
-            triggerRandomEvent();
-        } else {
-            nextEventTime = Date.now() + 20000;
-        }
+        if (Math.random() < (skill_l_event ? 0.9 : 0.5)) triggerRandomEvent();
+        else nextEventTime = Date.now() + 20000;
       }
       
-      document.querySelectorAll('.obstacle:not(.boss):not(.boss-projectile)').forEach(o=>{
-        let x = parseFloat(o.style.left) - speed;
-        o.style.left = x+'px';
-        if (checkCollision(player,o)){ takeDamage(); if(!isGameRunning) return; }
-        if (x<-150) o.remove();
-      });
+      // ДВИЖЕНИЕ И КОЛЛИЗИИ (ОПТИМИЗИРОВАНО)
+      for (let i=obstacleEntities.length-1; i>=0; i--) {
+        let o = obstacleEntities[i]; o.x -= speed; o.el.style.left = o.x + 'px';
+        if (checkAABB(HITBOX_X, yPosition + 10, HITBOX_W, HITBOX_H, o.x, o.y, o.w, o.h)) { takeDamage(); if(!isGameRunning) return; }
+        if (o.x < -150) { o.el.remove(); obstacleEntities.splice(i, 1); }
+      }
       
-      document.querySelectorAll('.coin').forEach(c=>{
-        let x = parseFloat(c.style.left) - speed;
-        let y = parseFloat(c.style.bottom);
+      for (let i=coinEntities.length-1; i>=0; i--) {
+        let c = coinEntities[i]; let cx = c.x - speed; let cy = c.y;
         if (activeMagnet){
-          const cr=c.getBoundingClientRect(), pr=player.getBoundingClientRect();
-          const px=pr.left+pr.width/2, py=pr.top+pr.height/2;
-          const cx=cr.left+cr.width/2, cy=cr.top+cr.height/2;
-          const dx=px-cx, dy=cy-py;
+          const dx = 90 - cx; const dy = (yPosition + 35) - cy;
           const range = skill_a_magnet?600:300;
-          if (Math.sqrt(dx*dx+dy*dy)<range){ x+=dx*0.15; y+=dy*0.15; }
+          if (Math.sqrt(dx*dx+dy*dy)<range){ cx+=dx*0.15; cy+=dy*0.15; }
         }
-        c.style.left=x+'px'; c.style.bottom=y+'px';
-        if (checkCollision(player,c)){ 
-          playSFX('coin'); c.remove(); 
-          addCombo();
-          const r=Math.round((activeGlasses?2:1)*(skill_l_coin?2:1)*comboMultiplier); 
-          coins+=r; localStorage.setItem('dino_coins',coins); coinsDisplay.textContent=`🪙 ${coins}`; 
-          const q=quests.find(qq=>qq.id==='coin'); 
-          if(q&&!q.done){q.current++; updateQuestProgress('coin'); checkQuestComplete('coin');} 
-        }
-        else if (x<-50) c.remove();
-      });
+        c.x = cx; c.y = cy; c.el.style.left = c.x + 'px'; c.el.style.bottom = c.y + 'px';
+        if (checkAABB(HITBOX_X, yPosition + 10, HITBOX_W, HITBOX_H, c.x, c.y, c.w, c.h)) {
+          c.el.remove(); coinEntities.splice(i, 1); playSFX('coin'); addCombo();
+          const r=Math.round((activeGlasses?2:1)*(skill_l_coin?2:1)*comboMultiplier); coins+=r; localStorage.setItem('dino_coins',coins); coinsDisplay.textContent=`🪙 ${coins}`;
+          const q=quests.find(qq=>qq.id==='coin'); if(q&&!q.done){q.current++; updateQuestProgress('coin'); checkQuestComplete('coin');}
+        } else if (c.x < -50) { c.el.remove(); coinEntities.splice(i, 1); }
+      }
       
-      updatePowerups(speed);
+      for (let i=powerupsOnScreen.length-1; i>=0; i--) {
+        const p = powerupsOnScreen[i]; p.x -= speed; p.el.style.left = p.x + 'px';
+        if (checkAABB(HITBOX_X, yPosition + 10, HITBOX_W, HITBOX_H, p.x, p.y, p.w, p.h)) {
+          if (p.type === 'shield') { hasShield = true; addBuffIcon('shield'); } else { hasDoubleJump = true; addBuffIcon('megajump'); }
+          playSFX('buy'); p.el.remove(); powerupsOnScreen.splice(i, 1);
+        } else if (p.x < -50) { p.el.remove(); powerupsOnScreen.splice(i, 1); }
+      }
     }
-    
     if (cs>highScore){ highScore=cs; highScoreDisplay.textContent=`HI ${String(highScore).padStart(5,'0')}`; }
   }
   
-  if (comboCount > 0 && Date.now() > comboTimer) {
-    resetCombo();
+  // МЕТЕОРЫ
+  for (let i=meteorEntities.length-1; i>=0; i--) {
+    let m = meteorEntities[i]; m.y -= 5; m.el.style.bottom = m.y + 'px';
+    if (m.y < -50) { m.el.remove(); meteorEntities.splice(i,1); continue; }
+    if (checkAABB(HITBOX_X, yPosition + 10, HITBOX_W, HITBOX_H, m.x, m.y, m.w, m.h)) { m.el.remove(); meteorEntities.splice(i,1); takeDamage(); if (!isGameRunning) return; }
   }
   
-  updateDog();
-  updateWeather();
+  if (comboCount > 0 && Date.now() > comboTimer) resetCombo();
+  updateDog(); updateWeather();
   
   if (!isBossActive && activePet){
     petDrone.style.display='block';
-    const pr=player.getBoundingClientRect(), gr=gameContainer.getBoundingClientRect();
-    const tx=(pr.left-gr.left)+30, ty=yPosition+80;
-    petX += (tx-petX)*0.1; petY += (ty-petY)*0.1;
+    const tx=80, ty=yPosition+80; petX += (tx-petX)*0.1; petY += (ty-petY)*0.1;
     petDrone.style.left=petX+'px'; petDrone.style.bottom=petY+'px';
   }
   
   if (!isGrounded){
-    yVelocity -= 0.5;
-    yPosition += yVelocity;
+    yVelocity -= 0.5; yPosition += yVelocity;
     if (yPosition<=0){ yPosition=0; yVelocity=0; isGrounded=true; player.classList.add('running'); jumpCount=0; }
   }
   player.style.bottom = yPosition+'px';
@@ -980,181 +683,100 @@ function gameLoop(){
 function spawnObstacle(){
   if (gameContainer.offsetWidth===0) return;
   const o = document.createElement('div'); o.classList.add('obstacle');
-  o.style.left = gameContainer.offsetWidth+'px';
-  if (Math.random()<0.2) o.classList.add('flying');
-  else { o.style.height=(Math.floor(Math.random()*30)+50)+'px'; o.style.width = Math.random()>0.6?'55px':'35px'; }
+  let w, h, flying = false;
+  if (Math.random()<0.2) { o.classList.add('flying'); w = 60; h = 45; flying = true; }
+  else { h = (Math.floor(Math.random()*30)+50); w = Math.random()>0.6?55:35; o.style.height = h+'px'; o.style.width = w+'px'; }
+  let ox = gameContainer.offsetWidth; let oy = flying ? 70 : 0;
+  o.style.left = ox + 'px'; o.style.bottom = oy + 'px';
   obstaclesContainer.appendChild(o);
+  obstacleEntities.push({ el: o, x: ox, y: oy, w: w, h: h });
 }
 function spawnCoin(){
-  if (document.querySelectorAll('.coin').length>=5) return;
-  const c=document.createElement('div'); c.className='coin';
-  c.style.left=gameContainer.offsetWidth+'px';
-  c.style.bottom=(Math.floor(Math.random()*120)+50)+'px';
+  if (coinEntities.length >= 5) return;
+  const c = document.createElement('div'); c.className = 'coin';
+  let cx = gameContainer.offsetWidth; let cy = (Math.floor(Math.random()*120)+50);
+  c.style.left = cx + 'px'; c.style.bottom = cy + 'px';
   coinsContainer.appendChild(c);
+  coinEntities.push({ el: c, x: cx, y: cy, w: 24, h: 24 });
 }
 
 // --- КВЕСТЫ ---
 function renderQuests(){
   questListUI.innerHTML='';
-  quests.forEach(q=>{
-    const d=document.createElement('div');
-    d.dataset.questId = q.id;
-    d.className=`quest-item ${q.done?'done':''}`;
-    d.innerHTML=`${q.done?'✅':'⏳'} ${q.text} (${Math.min(q.current,q.target)}/${q.target})`;
-    questListUI.appendChild(d);
-  });
+  quests.forEach(q=>{ const d=document.createElement('div'); d.dataset.questId = q.id; d.className=`quest-item ${q.done?'done':''}`; d.innerHTML=`${q.done?'✅':'⏳'} ${q.text} (${Math.min(q.current,q.target)}/${q.target})`; questListUI.appendChild(d); });
 }
-
 function updateQuestProgress(id){
-  const q = quests.find(x=>x.id===id);
-  if (!q) return;
-  const el = questListUI.querySelector(`[data-quest-id="${id}"]`);
-  if (!el) return;
-  el.className = `quest-item ${q.done?'done':''}`;
-  el.innerHTML = `${q.done?'✅':'⏳'} ${q.text} (${Math.min(q.current,q.target)}/${q.target})`;
+  const q = quests.find(x=>x.id===id); if (!q) return;
+  const el = questListUI.querySelector(`[data-quest-id="${id}"]`); if (!el) return;
+  el.className = `quest-item ${q.done?'done':''}`; el.innerHTML = `${q.done?'✅':'⏳'} ${q.text} (${Math.min(q.current,q.target)}/${q.target})`;
 }
-
 function checkQuestComplete(id){
   const q=quests.find(x=>x.id===id);
   if (q&&!q.done&&q.current>=q.target){
-    q.done=true; coins+=q.reward; localStorage.setItem('dino_coins',coins);
-    coinsDisplay.textContent=`🪙 ${coins}`;
-    playSFX('buy');
-    showToast(`🎉 КВЕСТ ВЫПОЛНЕН!\n${q.text}\n+${q.reward} 🪙`);
-    updateShopUI();
-    saveProfileToServer();
+    q.done=true; coins+=q.reward; localStorage.setItem('dino_coins',coins); coinsDisplay.textContent=`🪙 ${coins}`;
+    playSFX('buy'); showToast(`🎉 КВЕСТ ВЫПОЛНЕН!\n${q.text}\n+${q.reward} 🪙`); updateShopUI(); saveProfileToServer();
   }
   updateQuestProgress(id);
 }
 
 // --- СТАРТ ---
 function startGame(daily=false){
-  initAudio();
-  isDailyMode=daily;
-  isGameRunning=true;
-  isBossActive=false;
-  bossHpContainer.style.display='none';
+  initAudio(); isDailyMode=daily; isGameRunning=true; isBossActive=false; bossHpContainer.style.display='none';
   if(bossElement){bossElement.remove();bossElement=null;}
-  bossProjectiles.forEach(p=>p.el.remove()); bossProjectiles=[];
-  droneProjectiles.forEach(p=>p.el.remove()); droneProjectiles=[];
+  clearEntities();
+  gameMenu.style.display='none'; obstaclesContainer.innerHTML=''; bossContainer.innerHTML=''; coinsContainer.innerHTML=''; powerupsContainer.innerHTML='';
+  weatherParticles.forEach(p=>p.el.remove()); weatherParticles=[]; weatherSpawnTimer = 0;
   
-  gameMenu.style.display='none';
-  obstaclesContainer.innerHTML=''; bossContainer.innerHTML=''; coinsContainer.innerHTML='';
-  powerupsContainer.innerHTML='';
-  
-  powerupsOnScreen.forEach(p=>p.el.remove()); powerupsOnScreen=[];
-  weatherParticles.forEach(p=>p.el.remove()); weatherParticles=[];
-  weatherSpawnTimer = 0;
-  
-  const stats = getClassStats();
-  maxHP = stats.hp; currentHP = stats.hp;
-  livesDisplay.innerHTML = '❤️'.repeat(currentHP);
-  livesDisplay.style.display = maxHP>1 ? 'flex':'none';
-  
+  const stats = getClassStats(); maxHP = stats.hp; currentHP = stats.hp;
+  livesDisplay.innerHTML = '❤️'.repeat(currentHP); livesDisplay.style.display = maxHP>1 ? 'flex':'none';
   score=0; yPosition=0; yVelocity=0; isGrounded=true; jumpCount=0;
-  spawnObstacleTimer=0; spawnCoinTimer=0; spawnPowerupTimer=0;
-  droneShootTimer=0;
-  
-  hasShield = false; hasDoubleJump = false;
-  activeBuffsUI.innerHTML = '';
-  resetCombo();
-  
-  petDog.style.display = activeDog?'block':'none';
-  dogX=50; dogY=0;
-  
-  currentEvent=null; eventBanner.style.display='none';
-  nextEventTime = Date.now() + 30000;
-  lastEventType = null;
-  
-  quests.forEach(q=>{q.current=0;q.done=false;});
-  renderQuests();
-  
-  currentBiomeTier = daily?0:(parseInt(startBiomeSelect.value)||0);
-  nextBossScore = (currentBiomeTier+1)*300;
-  gameContainer.className = `game-container biome-${['desert','jungle','ice','volcano','cyber'][currentBiomeTier]}`;
-  playBiomeMusic(currentBiomeTier);
-  
-  updatePlayerSkin();
-  player.classList.add('running');
-  
+  spawnObstacleTimer=0; spawnCoinTimer=0; spawnPowerupTimer=0; droneShootTimer=0;
+  hasShield = false; hasDoubleJump = false; activeBuffsUI.innerHTML = ''; resetCombo();
+  petDog.style.display = activeDog?'block':'none'; dogX=50; dogY=0;
+  currentEvent=null; eventBanner.style.display='none'; nextEventTime = Date.now() + 30000; lastEventType = null;
+  quests.forEach(q=>{q.current=0;q.done=false;}); renderQuests();
+  currentBiomeTier = daily?0:(parseInt(startBiomeSelect.value)||0); nextBossScore = (currentBiomeTier+1)*300;
+  gameContainer.className = `game-container biome-${['desert','jungle','ice','volcano','cyber'][currentBiomeTier]}`; playBiomeMusic(currentBiomeTier);
+  updatePlayerSkin(); player.classList.add('running');
   invincibleUntil = Date.now()+2000;
-  highScore = parseInt(localStorage.getItem(daily?'dino_daily_hs':'dino_highscore'))||0;
-  highScoreDisplay.textContent=`HI ${String(highScore).padStart(5,'0')}`;
-  
-  if (animationFrameId) cancelAnimationFrame(animationFrameId);
-  gameLoop();
+  highScore = parseInt(localStorage.getItem(daily?'dino_daily_hs':'dino_highscore'))||0; highScoreDisplay.textContent=`HI ${String(highScore).padStart(5,'0')}`;
+  if (animationFrameId) cancelAnimationFrame(animationFrameId); gameLoop();
 }
 
 function endGame(){
   if (!isGameRunning) return;
-  isGameRunning=false;
-  cancelAnimationFrame(animationFrameId);
-  bgMusic.pause();
-  playSFX('death');
-  
+  isGameRunning=false; cancelAnimationFrame(animationFrameId); bgMusic.pause(); playSFX('death');
   bossHpContainer.style.display='none';
   if(bossElement){bossElement.remove();bossElement=null;}
-  bossProjectiles.forEach(p=>p.el.remove()); bossProjectiles=[];
-  droneProjectiles.forEach(p=>p.el.remove()); droneProjectiles=[];
-  
-  const cs = Math.floor(score/10);
-  const dr = Math.floor(cs/50);
+  clearEntities();
+  const cs = Math.floor(score/10); const dr = Math.floor(cs/50);
   dna += dr; localStorage.setItem('dino_dna', dna);
   if (cs>highScore){ highScore=cs; localStorage.setItem(isDailyMode?'dino_daily_hs':'dino_highscore', highScore); }
-  
-  if (playerName) {
-    sendScore(playerName, cs);
-    saveProfileToServer();
-  } else {
-    pendingScore = cs;
-  }
-  
-  menuTitle.textContent='GAME OVER';
-  menuText.innerHTML=`Счёт: ${cs}<br>Получено ДНК: 🧬 +${dr}`;
-  startBtn.textContent='ИГРАТЬ СНОВА';
-  
-  gameMenu.style.display='flex';
-  updateShopUI(); updatePlayerSkin();
-  updateNameUI();
+  if (playerName) { sendScore(playerName, cs); saveProfileToServer(); } else { pendingScore = cs; }
+  menuTitle.textContent='GAME OVER'; menuText.innerHTML=`Счёт: ${cs}<br>Получено ДНК: 🧬 +${dr}`; startBtn.textContent='ИГРАТЬ СНОВА';
+  gameMenu.style.display='flex'; updateShopUI(); updatePlayerSkin(); updateNameUI();
 }
 
 // --- УПРАВЛЕНИЕ ---
 function doJump(){
   if (!isGameRunning) return;
-  const stats = getClassStats();
-  const baseJump = activeShoes?14:12;
-  const jumpForce = baseJump * stats.jumpMul;
-  
+  const stats = getClassStats(); const baseJump = activeShoes?14:12; const jumpForce = baseJump * stats.jumpMul;
   if (isGrounded){
-    playSFX('jump');
-    yVelocity = jumpForce;
-    isGrounded=false;
-    jumpCount=1;
-    const q=quests.find(x=>x.id==='jump'); 
-    if(q&&!q.done){q.current++; updateQuestProgress('jump'); checkQuestComplete('jump');}
+    playSFX('jump'); yVelocity = jumpForce; isGrounded=false; jumpCount=1;
+    const q=quests.find(x=>x.id==='jump'); if(q&&!q.done){q.current++; updateQuestProgress('jump'); checkQuestComplete('jump');}
   } else if ((selectedSkin==='raptor'||hasDoubleJump) && jumpCount===1){
-    playSFX('jump');
-    yVelocity = jumpForce*0.85;
-    jumpCount=2;
-    const q=quests.find(x=>x.id==='jump'); 
-    if(q&&!q.done){q.current++; updateQuestProgress('jump'); checkQuestComplete('jump');}
+    playSFX('jump'); yVelocity = jumpForce*0.85; jumpCount=2;
+    const q=quests.find(x=>x.id==='jump'); if(q&&!q.done){q.current++; updateQuestProgress('jump'); checkQuestComplete('jump');}
   }
 }
-
 function handleKeyDown(e){
   if (e.target.tagName==='INPUT') return;
   if (e.code==='Space'||e.key==='ArrowUp'){ e.preventDefault(); if(!isGameRunning) startGame(false); else doJump(); }
 }
 mobileJumpBtn.addEventListener('touchstart',(e)=>{e.preventDefault(); if(!isGameRunning) startGame(false); else doJump();});
-
 startBtn.onclick = ()=>startGame(false);
 window.addEventListener('keydown', handleKeyDown);
 
 // Init
-loadLeaderboard();
-updateShopUI();
-renderQuests();
-updatePlayerSkin();
-renderSkills();
-updateNameUI();
+loadLeaderboard(); updateShopUI(); renderQuests(); updatePlayerSkin(); renderSkills(); updateNameUI();
 if (playerName) loadProfileFromServer();

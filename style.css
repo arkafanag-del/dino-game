@@ -338,3 +338,17 @@ body {
     .shop-btn .price { font-size: 10px; }
     .shop-btn .icon { font-size: 16px; margin-bottom: 2px; }
 }
+/* --- ОПТИМИЗАЦИЯ ДЛЯ ТЕЛЕФОНОВ --- */
+@media (max-width: 900px) {
+    /* Убираем тяжелые тени, которые вешают телефоны */
+    .player { filter: none !important; }
+    .obstacle { filter: none !important; }
+    .obstacle.flying { filter: none !important; }
+    .boss { filter: none !important; }
+    .coin { box-shadow: none !important; border-width: 1px !important; }
+    .powerup { box-shadow: none !important; }
+    
+    /* Отключаем погоду и гипно-анимации для экономии FPS */
+    .weather-particle { display: none !important; }
+    .bg-hypnotic { animation: none !important; opacity: 0.3 !important; }
+}
