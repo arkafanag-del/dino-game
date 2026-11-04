@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Dino Ultimate RPG 6.2</title>
+    <title>Dino Ultimate RPG 6.3</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -62,7 +62,7 @@
         <div class="player" id="player-character"></div>
 
         <div id="game-menu">
-            <h1 id="menu-title">ДИНОЗАВРИК 6.2</h1>
+            <h1 id="menu-title">ДИНОЗАВРИК 6.3</h1>
             <p id="menu-text">Нажмите Пробел или кнопку, чтобы начать</p>
             
             <div class="menu-actions">
@@ -101,6 +101,7 @@
             <button id="start-btn">ИГРАТЬ</button>
         </div>
 
+        <!-- Модалка Навыков -->
         <div id="skill-modal" class="modal" style="display: none;">
             <h2>🌳 ДРЕВО НАВЫКОВ</h2>
             <div class="skill-tree">
@@ -123,10 +124,18 @@
             <button class="close-modal-btn">ЗАКРЫТЬ</button>
         </div>
 
+        <!-- Модалка Скинов -->
         <div id="skins-modal" class="modal" style="display: none;">
             <h2>🦖 ВЫБОР КЛАССА</h2>
             <div class="skins-grid" id="skins-grid"></div>
             <button class="close-modal-btn">ЗАКРЫТЬ</button>
+        </div>
+
+        <!-- Модалка Сюжета (НОВОЕ) -->
+        <div id="story-modal" class="modal story-modal" style="display: none;">
+            <h2 id="story-title">ГЛАВА 1</h2>
+            <div id="story-text" class="story-text"></div>
+            <button id="story-next-btn" class="action-btn" style="font-size: 14px; padding: 12px 30px; margin-top: 20px;">ВПЕРЕД ▶</button>
         </div>
     </div>
 

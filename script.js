@@ -42,7 +42,94 @@ const mobileJumpBtn = document.getElementById('mobile-jump-btn');
 const muteBtn = document.getElementById('mute-btn');
 const playerNameInput = document.getElementById('player-name-input');
 const saveRecordBtn = document.getElementById('save-record-btn');
+
+// Сюжетка DOM
+const storyModal = document.getElementById('story-modal');
+const storyTitle = document.getElementById('story-title');
+const storyText = document.getElementById('story-text');
+const storyNextBtn = document.getElementById('story-next-btn');
+
 const API_BASE = 'https://dino-game-backend-summer-tide-6155.fly.dev';
+
+// --- СЮЖЕТ ---
+const storyData = [
+  { 
+    title: "ГЛАВА 1: ПУСТЫНЯ (НАЧАЛО)", 
+    text: "Помнишь старые добрые времена? Тогда ты был просто пиксельным динозавриком, ждущим, когда же появится Wi-Fi. Ты прыгал через кактусы в бесконечной черно-белой пустыне... Но однажды сеть отключилась навсегда, и всё изменилось. Теперь это не просто игра — это реальность. Твой путь начинается там, где всё началось." 
+  },
+  { 
+    title: "ГЛАВА 2: ДЖУНГЛИ (ЭВОЛЮЦИЯ)", 
+    text: "Победив первого босса, ты чувствуешь небывалую силу. Эволюция пошла вверх! Из простого 2D-спрайта ты превратился в полноценного RPG-героя. В джунглях ты находишь заброшенные сервера Google. Местные птицы летают так же низко, как в старой игре, но теперь у них есть HP." 
+  },
+  { 
+    title: "ГЛАВА 3: ЛЕДНИКИ (ВРЕМЯ ЗАМЕРЛО)", 
+    text: "Ты попадаешь в Ледники Вечности. Здесь время застыло, как зависший браузер. Ты вспоминаешь, как бесконечно бежал по экрану, пока не наступал Game Over. Теперь у тебя есть сердца, монеты и возможность дать отпор. Ледяной ветер не остановит твою эволюцию." 
+  },
+  { 
+    title: "ГЛАВА 4: ВУЛКАН (ERROR 404)", 
+    text: "Вулкан Огненных Ошибок. Именно здесь сгорают сервера, когда интернет падает. Ты встречаешь старых врагов — Птеродактилей из классической игры. Но теперь ты можешь не только уворачиваться от них, но и прыгать им на голову! Пора показать им, чему ты научился." 
+  },
+  { 
+    title: "ГЛАВА 5: КИБЕРПАНК (ФИНАЛ)", 
+    text: "Киберпанк. Нейросети захватили мир. Злой ИИ, создавший лабиринты из кактусов и бесконечные пустыни, ждет тебя. Пора вернуть управление интернетом и переписать код игры!" 
+  },
+  { 
+    title: "ПОБЕДА! (НОВЫЙ РЕКОРД)", 
+    text: "Ты победил ИИ! Интернет восстановлен, но ты больше не тот маленький пиксельный динозаврик. Ты — настоящая легенда RPG. Готов ли ты отправиться в новое путешествие, когда Wi-Fi снова упадет?" 
+  }
+];
+
+let pendingStoryTier = 0;
+
+function showStory(tier) {
+  if (tier >= storyData.length) {
+    tier = storyData.length - 1;
+  }
+  pendingStoryTier = tier;
+  storyTitle.innerHTML = storyData[tier].title;
+  storyText.innerHTML = storyData[tier].text;
+  storyModal.style.display = 'block';
+  isGameRunning = false;
+  bgMusic.pause();
+}
+
+storyNextBtn.onclick = () => {
+  playSFX('click');
+  storyModal.style.display = 'none';
+  if (pendingStoryTier >= storyData.length - 1) {
+    endGame();
+  } else {
+    startNextBiome(pendingStoryTier);
+  }
+};
+
+function startNextBiome(tier) {
+  currentBiomeTier = tier;
+  nextBossScore = (currentBiomeTier + 1) * 300;
+  gameContainer.className = `game-container biome-${['desert','jungle','ice','volcano','cyber'][currentBiomeTier] || 'cyber'}`;
+  
+  if (currentBiomeTier > unlockedBiome && currentBiomeTier <= 4) { 
+    unlockedBiome = currentBiomeTier; 
+    localStorage.setItem('dino_unlocked_biome', unlockedBiome); 
+    updateShopUI(); 
+  }
+
+  obstaclesContainer.innerHTML = '';
+  coinsContainer.innerHTML = '';
+  powerupsContainer.innerHTML = '';
+  bossProjectiles.forEach(p => p.el.remove()); bossProjectiles = [];
+  droneProjectiles.forEach(p => p.el.remove()); droneProjectiles = [];
+
+  yPosition = 0; yVelocity = 0; isGrounded = true;
+  player.style.bottom = '0px';
+  
+  spawnObstacleTimer = 0; spawnCoinTimer = 0; spawnPowerupTimer = 0;
+  invincibleUntil = Date.now() + 2000;
+
+  playBiomeMusic(currentBiomeTier);
+  isGameRunning = true;
+  gameLoop();
+}
 
 // --- ЗВУК ---
 let audioCtx, isMuted = false;
@@ -109,11 +196,8 @@ let activePet=hasPet && (localStorage.getItem('dino_pet_active')!=='false');
 let activeDog=hasDog && (localStorage.getItem('dino_dog_active')!=='false');
 
 let selectedSkin=localStorage.getItem('dino_selected_skin')||'default';
-// Если в localStorage сохранился 'trike', сбрасываем на 'default'
 if (selectedSkin === 'trike') { selectedSkin = 'default'; localStorage.setItem('dino_selected_skin', 'default'); }
-
 let unlockedSkins=JSON.parse(localStorage.getItem('dino_unlocked_skins'))||['default'];
-// Убираем 'trike' из разблокированных, если он там был
 unlockedSkins = unlockedSkins.filter(s => s !== 'trike');
 
 const skinList=[
@@ -137,6 +221,7 @@ let invincibleUntil=0;
 
 let nextEventTime=0;
 let currentEvent=null;
+let lastEventType=null;
 
 let quests=[
   {id:'jump', text:'Прыгни 10 раз', target:10, current:0, reward:5, done:false},
@@ -421,8 +506,17 @@ function updateDog(){
 // --- СОБЫТИЯ ---
 function triggerRandomEvent(){
   if (currentEvent) return;
-  const events = ['meteor','goldrush','frenzy'];
-  const type = events[Math.floor(Math.random()*events.length)];
+  
+  const rand = Math.random();
+  let type = 'meteor';
+  if (rand > 0.7) type = 'goldrush';
+  else if (rand > 0.4) type = 'frenzy';
+
+  if (type === lastEventType) {
+      const otherEvents = ['meteor', 'goldrush', 'frenzy'].filter(e => e !== type);
+      type = otherEvents[Math.floor(Math.random() * otherEvents.length)];
+  }
+  lastEventType = type;
   currentEvent = type;
   
   if (type==='meteor'){
@@ -447,23 +541,35 @@ function triggerRandomEvent(){
         }, 30);
       }, i*200);
     }
-    setTimeout(()=>{ currentEvent=null; eventBanner.style.display='none'; }, 5000);
+    setTimeout(()=>{ 
+        currentEvent=null; 
+        eventBanner.style.display='none'; 
+        nextEventTime = Date.now() + (skill_l_event ? 30000 : 60000);
+    }, 5000);
   } else if (type==='goldrush'){
     eventBanner.textContent = '🪙 ЗОЛОТАЯ ЛИХОРАДКА!';
     eventBanner.style.color = '#ffd700';
     eventBanner.style.display = 'block';
-    for(let i=0;i<30;i++){
+    for(let i=0;i<15;i++){
       setTimeout(()=>{
         if (!isGameRunning) return;
         spawnCoin();
-      }, i*100);
+      }, i*150);
     }
-    setTimeout(()=>{ currentEvent=null; eventBanner.style.display='none'; }, 4000);
+    setTimeout(()=>{ 
+        currentEvent=null; 
+        eventBanner.style.display='none'; 
+        nextEventTime = Date.now() + (skill_l_event ? 30000 : 60000); 
+    }, 4000);
   } else {
     eventBanner.textContent = '⚡ БЕЗУМНАЯ СКОРОСТЬ!';
     eventBanner.style.color = '#ff00ff';
     eventBanner.style.display = 'block';
-    setTimeout(()=>{ currentEvent=null; eventBanner.style.display='none'; }, 5000);
+    setTimeout(()=>{ 
+        currentEvent=null; 
+        eventBanner.style.display='none'; 
+        nextEventTime = Date.now() + (skill_l_event ? 30000 : 60000); 
+    }, 5000);
   }
 }
 
@@ -616,20 +722,25 @@ function killBoss(){
   droneProjectiles.forEach(p=>p.el.remove()); droneProjectiles=[];
   bossHpContainer.style.display='none';
   isBossActive=false;
+  
   const bq = quests.find(q=>q.id==='boss'); 
   if(bq){bq.current++; updateQuestProgress('boss'); checkQuestComplete('boss');}
-  currentBiomeTier++;
-  nextBossScore = (currentBiomeTier+1)*300;
-  gameContainer.className = `game-container biome-${['desert','jungle','ice','volcano','cyber'][currentBiomeTier]||'cyber'}`;
-  playBiomeMusic(currentBiomeTier);
-  if (currentBiomeTier>unlockedBiome && currentBiomeTier<=4){ unlockedBiome=currentBiomeTier; localStorage.setItem('dino_unlocked_biome',unlockedBiome); updateShopUI(); }
-  showToast(`🎉 БОСС ПОБЕЖДЕН!\nОткрыт биом ${currentBiomeTier+1}!`, true);
+  
+  invincibleUntil = Date.now() + 2000; // ДАЕМ 2 СЕКУНДЫ НЕУЯЗВИМОСТИ ПОСЛЕ БОССА
+  
+  currentBiomeTier++; 
+  if (currentBiomeTier > 4) {
+    showStory(5); 
+  } else {
+    showStory(currentBiomeTier); 
+  }
 }
 
 function spawnBoss(){
   isBossActive=true;
-  const hpList=[3,5,7,10,15];
-  maxBossHP = hpList[currentBiomeTier]||15;
+  // СБАЛАНСИРОВАННЫЕ HP (было 3,5,7,10,15)
+  const hpList=[3, 4, 5, 7, 9]; 
+  maxBossHP = hpList[currentBiomeTier]||9;
   bossHP=maxBossHP;
   bossHpFill.style.width='100%';
   bossHpContainer.style.display='block';
@@ -653,8 +764,10 @@ function updateBoss(){
   bossElement.style.bottom = by+'px';
   
   bossShootTimer++;
-  const si = Math.max(20, 60-currentBiomeTier*10);
-  const maxP = 3+currentBiomeTier;
+  // УВЕЛИЧЕНА ПАУЗА МЕЖДУ ВЫСТРЕЛАМИ (было 20-60, стало 40-80)
+  const si = Math.max(40, 80-currentBiomeTier*10);
+  // УМЕНЬШЕНО КОЛИЧЕСТВО СНАРЯДОВ НА ЭКРАНЕ
+  const maxP = 2+currentBiomeTier;
   
   if (bossShootTimer>si && bossProjectiles.length<maxP){
     bossElement.classList.add('shooting');
@@ -662,7 +775,8 @@ function updateBoss(){
 
     const pr=player.getBoundingClientRect(), gr=gameContainer.getBoundingClientRect();
     const tx=pr.left-gr.left+pr.width/2, ty=pr.bottom-gr.bottom+pr.height/2;
-    const sp = 4+currentBiomeTier*0.8;
+    // УМЕНЬШЕНА СКОРОСТЬ СНАРЯДОВ (было 4+0.8, стало 3+0.5)
+    const sp = 3 + currentBiomeTier*0.5;
 
     const fireProjectile = (sx, sy, vx, vy) => {
       const p=document.createElement('div'); p.className='boss-projectile';
@@ -684,20 +798,23 @@ function updateBoss(){
       fireProjectile(sx, sy, Math.cos(angle+0.3)*sp, Math.sin(angle+0.3)*sp);
     }
     else if (currentBiomeTier === 2) {
-      const sx=bx, sy=by+45;
-      fireProjectile(sx, sy, -10, 0);
+      // ЛЕДЯНОЙ ЛАЗЕР: теперь летит выше и медленнее. Его МОЖНО перепрыгнуть!
+      const sx=bx, sy=by+20; // было by+45 (слишком низко)
+      fireProjectile(sx, sy, -6, 0); // было -10
     }
     else if (currentBiomeTier === 3) {
+      // ВУЛКАН: падает медленнее
       const sx = tx, sy = gameContainer.offsetHeight;
-      fireProjectile(sx, sy, 0, -6); 
+      fireProjectile(sx, sy, 0, -4); // было -6
     }
     else {
+      // КИБЕРПАНК: убран множитель 1.2, разброс меньше (0.3 вместо 0.4)
       const sx=bx+45, sy=by+45;
       const dx=tx-sx, dy=ty-sy; const d=Math.sqrt(dx*dx+dy*dy)||1;
       const angle = Math.atan2(dy, dx);
-      fireProjectile(sx, sy, Math.cos(angle)*sp*1.2, Math.sin(angle)*sp*1.2);
-      fireProjectile(sx, sy, Math.cos(angle-0.4)*sp*1.2, Math.sin(angle-0.4)*sp*1.2);
-      fireProjectile(sx, sy, Math.cos(angle+0.4)*sp*1.2, Math.sin(angle+0.4)*sp*1.2);
+      fireProjectile(sx, sy, Math.cos(angle)*sp, Math.sin(angle)*sp);
+      fireProjectile(sx, sy, Math.cos(angle-0.3)*sp, Math.sin(angle-0.3)*sp);
+      fireProjectile(sx, sy, Math.cos(angle+0.3)*sp, Math.sin(angle+0.3)*sp);
     }
     bossShootTimer=0;
   }
@@ -755,9 +872,10 @@ function updateBoss(){
       bossHpFill.style.width=(Math.max(0,bossHP)/maxBossHP*100)+'%';
       playSFX('boss_hit');
       yVelocity=12;
-      if (bossHP<=0) killBoss();
+      if (bossHP<=0) { killBoss(); return; }
     } else {
       takeDamage();
+      if (!isGameRunning) return;
     }
   }
 }
@@ -787,8 +905,11 @@ function gameLoop(){
       
       if (Date.now() > nextEventTime && !currentEvent){
         const chance = skill_l_event ? 0.9 : 0.5;
-        if (Math.random()<chance) triggerRandomEvent();
-        nextEventTime = Date.now() + (skill_l_event?20000:40000);
+        if (Math.random()<chance) {
+            triggerRandomEvent();
+        } else {
+            nextEventTime = Date.now() + 20000;
+        }
       }
       
       document.querySelectorAll('.obstacle:not(.boss):not(.boss-projectile)').forEach(o=>{
@@ -943,6 +1064,7 @@ function startGame(daily=false){
   
   currentEvent=null; eventBanner.style.display='none';
   nextEventTime = Date.now() + 30000;
+  lastEventType = null;
   
   quests.forEach(q=>{q.current=0;q.done=false;});
   renderQuests();
