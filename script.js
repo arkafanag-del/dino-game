@@ -176,7 +176,7 @@ let isBossActive=false;
 let bossHP=0, maxBossHP=3;
 let bossTime=0, bossShootTimer=0;
 let bossElement=null;
-let bX = 0, bY = 0; // Координаты босса
+let bX = 0, bY = 0;
 let nextBossScore=300;
 
 // ПИТОМЦЫ
@@ -191,7 +191,7 @@ let jumpCount=0;
 let spawnObstacleTimer=0, spawnCoinTimer=0, spawnPowerupTimer=0;
 let nextEventTime=0, currentEvent=null, lastEventType=null;
 
-// МАССИВЫ СУЩНОСТЕЙ (для оптимизации)
+// МАССИВЫ СУЩНОСТЕЙ
 let obstacleEntities = [];
 let coinEntities = [];
 let powerupsOnScreen = [];
@@ -199,8 +199,8 @@ let meteorEntities = [];
 let bossProjectileEntities = [];
 let droneProjectileEntities = [];
 
-// ХИТБОКС ИГРОКА (Вместо 80x80, мы используем точный 50x50 в центре)
-const HITBOX_X = 65; // 50px (позиция CSS) + 15px отступ
+// ХИТБОКС ИГРОКА
+const HITBOX_X = 65; // Центр игрока
 const HITBOX_W = 50;
 const HITBOX_H = 50;
 
@@ -216,17 +216,12 @@ highScoreDisplay.textContent=`HI ${String(highScore).padStart(5,'0')}`;
 coinsDisplay.textContent=`🪙 ${coins}`;
 dnaDisplay.textContent=`🧬 ${dna}`;
 
-// --- МАТЕМАТИЧЕСКАЯ КОЛЛИЗИЯ (БЕЗ ЛАГОВ) ---
+// --- КОЛЛИЗИЯ ---
 function checkAABB(x1, y1, w1, h1, x2, y2, w2, h2) {
-  // Небольшой отступ для прощения (на телефоне меньше)
   const pad = window.innerWidth < 900 ? 3 : 6; 
-  return !(x1 + pad > x2 + w2 - pad || 
-           x1 + w1 - pad < x2 + pad || 
-           y1 + pad > y2 + h2 - pad || 
-           y1 + h1 - pad < y2 + pad);
+  return !(x1 + pad > x2 + w2 - pad || x1 + w1 - pad < x2 + pad || y1 + pad > y2 + h2 - pad || y1 + h1 - pad < y2 + pad);
 }
 
-// --- ОЧИСТКА СУЩНОСТЕЙ ---
 function clearEntities() {
   obstacleEntities.forEach(e => e.el.remove()); obstacleEntities = [];
   coinEntities.forEach(e => e.el.remove()); coinEntities = [];
@@ -476,7 +471,7 @@ function spawnWeatherParticle(){
 }
 function updateWeather(){
   weatherSpawnTimer++;
-  const threshold = window.innerWidth < 900 ? 15 : 10; // на мобилках реже
+  const threshold = window.innerWidth < 900 ? 15 : 10; 
   if (weatherSpawnTimer > threshold) {
     spawnWeatherParticle();
     if (currentBiomeTier === 3 && Math.random() < 0.5) {
@@ -520,7 +515,10 @@ function killBoss(){
 }
 
 function spawnBoss(){
-  isBossActive=true; const hpList=[3, 4, 5, 7, 9]; maxBossHP = hpList[currentBiomeTier]||9; bossHP=maxBossHP;
+  isBossActive=true; 
+  // СНИЖЕНО HP ВТОРОГО БОССА ДО 3 (для джунглей)
+  const hpList=[3, 3, 5, 7, 9]; 
+  maxBossHP = hpList[currentBiomeTier]||9; bossHP=maxBossHP;
   bossHpFill.style.width='100%'; bossHpContainer.style.display='block';
   obstaclesContainer.innerHTML=''; bossTime=0; bossShootTimer=0;
   bossElement=document.createElement('div'); bossElement.className='boss'; bossElement.style.left='100%';
@@ -535,23 +533,50 @@ function updateBoss(){
   bossElement.style.left = bX+'px'; bossElement.style.bottom = bY+'px';
   
   bossShootTimer++;
-  const si = Math.max(40, 80-currentBiomeTier*10);
+  // УВЕЛИЧЕНА ПАУЗА ДЛЯ 2-ГО БОССА (ДЖУНГЛИ)
+  let si = Math.max(40, 80-currentBiomeTier*10);
+  if (currentBiomeTier === 1) si = 110; 
+  
   const maxP = 2+currentBiomeTier;
   
   if (bossShootTimer>si && bossProjectileEntities.length<maxP){
     bossElement.classList.add('shooting'); setTimeout(()=>{ if(bossElement) bossElement.classList.remove('shooting'); }, 150);
-    const tx = 90, ty = yPosition + 35; // Прицел в игрока
+    const tx = 90, ty = yPosition + 35; 
     const sp = 3 + currentBiomeTier*0.5;
+    
     const fireProjectile = (sx, sy, vx, vy) => {
       const p=document.createElement('div'); p.className='boss-projectile';
       p.style.left=sx+'px'; p.style.bottom=sy+'px'; bossContainer.appendChild(p);
       bossProjectileEntities.push({el:p,vx,vy,x:sx,y:sy,w:20,h:20});
     };
-    if (currentBiomeTier === 0) { const sx=bX+45, sy=bY+45; const dx=tx-sx, dy=ty-sy; const d=Math.sqrt(dx*dx+dy*dy)||1; fireProjectile(sx, sy, (dx/d)*sp, (dy/d)*sp); } 
-    else if (currentBiomeTier === 1) { const sx=bX+45, sy=bY+45; const dx=tx-sx, dy=ty-sy; const d=Math.sqrt(dx*dx+dy*dy)||1; const angle = Math.atan2(dy, dx); fireProjectile(sx, sy, Math.cos(angle-0.3)*sp, Math.sin(angle-0.3)*sp); fireProjectile(sx, sy, Math.cos(angle+0.3)*sp, Math.sin(angle+0.3)*sp); }
-    else if (currentBiomeTier === 2) { const sx=bX, sy=bY+20; fireProjectile(sx, sy, -6, 0); }
-    else if (currentBiomeTier === 3) { fireProjectile(tx, gameContainer.offsetHeight, 0, -4); }
-    else { const sx=bX+45, sy=bY+45; const dx=tx-sx, dy=ty-sy; const d=Math.sqrt(dx*dx+dy*dy)||1; const angle = Math.atan2(dy, dx); fireProjectile(sx, sy, Math.cos(angle)*sp, Math.sin(angle)*sp); fireProjectile(sx, sy, Math.cos(angle-0.3)*sp, Math.sin(angle-0.3)*sp); fireProjectile(sx, sy, Math.cos(angle+0.3)*sp, Math.sin(angle+0.3)*sp); }
+    
+    if (currentBiomeTier === 0) { 
+      const sx=bX+45, sy=bY+45; const dx=tx-sx, dy=ty-sy; const d=Math.sqrt(dx*dx+dy*dy)||1; 
+      fireProjectile(sx, sy, (dx/d)*sp, (dy/d)*sp); 
+    } 
+    else if (currentBiomeTier === 1) { 
+      // ВТОРОЙ БОСС (ДЖУНГЛИ): 3 пули, но летят в 2 РАЗА МЕДЛЕННЕЕ (1.8 вместо 3.5)
+      const sx=bX+45, sy=bY+45; 
+      const dx=tx-sx, dy=ty-sy; const d=Math.sqrt(dx*dx+dy*dy)||1; 
+      const angle = Math.atan2(dy, dx);
+      const jungleSp = 1.8; // Медленные пули
+      fireProjectile(sx, sy, Math.cos(angle)*jungleSp, Math.sin(angle)*jungleSp);
+      fireProjectile(sx, sy, Math.cos(angle-0.4)*jungleSp, Math.sin(angle-0.4)*jungleSp);
+      fireProjectile(sx, sy, Math.cos(angle+0.4)*jungleSp, Math.sin(angle+0.4)*jungleSp);
+    }
+    else if (currentBiomeTier === 2) { 
+      const sx=bX, sy=bY+20; 
+      fireProjectile(sx, sy, -6, 0); 
+    }
+    else if (currentBiomeTier === 3) { 
+      fireProjectile(tx, gameContainer.offsetHeight, 0, -4); 
+    }
+    else { 
+      const sx=bX+45, sy=bY+45; const dx=tx-sx, dy=ty-sy; const d=Math.sqrt(dx*dx+dy*dy)||1; const angle = Math.atan2(dy, dx); 
+      fireProjectile(sx, sy, Math.cos(angle)*sp, Math.sin(angle)*sp); 
+      fireProjectile(sx, sy, Math.cos(angle-0.3)*sp, Math.sin(angle-0.3)*sp); 
+      fireProjectile(sx, sy, Math.cos(angle+0.3)*sp, Math.sin(angle+0.3)*sp); 
+    }
     bossShootTimer=0;
   }
   
@@ -618,7 +643,6 @@ function gameLoop(){
         else nextEventTime = Date.now() + 20000;
       }
       
-      // ДВИЖЕНИЕ И КОЛЛИЗИИ (ОПТИМИЗИРОВАНО)
       for (let i=obstacleEntities.length-1; i>=0; i--) {
         let o = obstacleEntities[i]; o.x -= speed; o.el.style.left = o.x + 'px';
         if (checkAABB(HITBOX_X, yPosition + 10, HITBOX_W, HITBOX_H, o.x, o.y, o.w, o.h)) { takeDamage(); if(!isGameRunning) return; }
@@ -651,7 +675,6 @@ function gameLoop(){
     if (cs>highScore){ highScore=cs; highScoreDisplay.textContent=`HI ${String(highScore).padStart(5,'0')}`; }
   }
   
-  // МЕТЕОРЫ
   for (let i=meteorEntities.length-1; i>=0; i--) {
     let m = meteorEntities[i]; m.y -= 5; m.el.style.bottom = m.y + 'px';
     if (m.y < -50) { m.el.remove(); meteorEntities.splice(i,1); continue; }
