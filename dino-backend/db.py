@@ -11,9 +11,6 @@ def get_db_connection():
 
 
 def _ensure_columns(conn, table, columns):
-    """Безопасно добавляет отсутствующие колонки в существующую таблицу.
-    Использует PRAGMA table_info, чтобы не полагаться на исключения ALTER
-    (которые при первой же ошибке обрывают всю цепочку добавлений)."""
     existing = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
     for col_name, col_def in columns:
         if col_name not in existing:
@@ -22,15 +19,12 @@ def _ensure_columns(conn, table, columns):
 
 def init_db():
     with get_db_connection() as conn:
-        # Таблица рекордов
         conn.execute("""
             CREATE TABLE IF NOT EXISTS scores (
                 name TEXT PRIMARY KEY,
                 score INTEGER NOT NULL
             )
         """)
-
-        # Таблица игроков
         conn.execute("""
             CREATE TABLE IF NOT EXISTS players (
                 name TEXT PRIMARY KEY,
@@ -42,8 +36,6 @@ def init_db():
                 streak INTEGER DEFAULT 0
             )
         """)
-
-        # БЕЗОПАСНОЕ ОБНОВЛЕНИЕ — добавляем только недостающие колонки
         _ensure_columns(conn, "players", [
             ("coins", "INTEGER DEFAULT 0"),
             ("quests_done", "INTEGER DEFAULT 0"),
@@ -52,5 +44,28 @@ def init_db():
             ("last_daily", "TEXT DEFAULT ''"),
             ("streak", "INTEGER DEFAULT 0"),
         ])
-
+        
+        # Таблица мирового босса (синглтон, id=1)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS world_boss (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                week_key TEXT NOT NULL,
+                max_hp INTEGER NOT NULL,
+                current_hp INTEGER NOT NULL,
+                killed_at TEXT DEFAULT '',
+                killed_by TEXT DEFAULT ''
+            )
+        """)
+        
+        # Таблица урона игроков по неделям
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS world_boss_damage (
+                week_key TEXT NOT NULL,
+                player_name TEXT NOT NULL,
+                damage INTEGER DEFAULT 0,
+                reward_claimed INTEGER DEFAULT 0,
+                PRIMARY KEY (week_key, player_name)
+            )
+        """)
+        
         conn.commit()
