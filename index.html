@@ -75,7 +75,7 @@
                 <button id="daily-challenge-btn" class="action-btn" style="border-color:#ffd700; color:#ffd700;">🔥 ДЕЙЛИ</button>
                 <button id="skill-btn" class="action-btn">🌳 НАВЫКИ</button>
                 <button id="skins-btn" class="action-btn">🦖 КЛАССЫ</button>
-                <button id="roulette-btn" class="action-btn" style="border-color:#ff00ff; color:#ff00ff;">🎰 РУЛЕТКА</button>
+                <button id="roulette-btn" class="action-btn" style="border-color:#ff00ff; color:#ff00ff;">🎰 КАЗИНО</button>
                 <button id="trail-btn" class="action-btn" style="border-color:#00ffff; color:#00ffff;">🎨 ШЛЕЙФ</button>
                 <button id="pets-btn" class="action-btn" style="border-color:#00ffff; color:#00ffff;">🐾 ПИТОМЦЫ</button>
                 <button id="exchange-btn" class="action-btn" style="border-color:#ffd700; color:#ffd700;">💱 БИРЖА</button>
@@ -166,18 +166,74 @@
             </div>
         </div>
 
-        <div id="roulette-modal" class="modal roulette-modal" style="display: none;">
-            <h2 style="color: #ff00ff; text-shadow: 0 0 10px #ff00ff;">🎰 ЗОЛОТАЯ РУЛЕТКА</h2>
-            <p style="color: #aaa; font-size: 12px; margin: 10px 0;">Стоимость спина: <strong style="color:#ffd700;">50 🪙</strong></p>
-            <div class="roulette-slots">
-                <div class="roulette-slot" id="slot-1">🎁</div>
-                <div class="roulette-slot" id="slot-2">🎁</div>
-                <div class="roulette-slot" id="slot-3">🎁</div>
-            </div>
-            <div id="roulette-result" class="roulette-result" style="display:none;"></div>
-            <button id="roulette-spin-btn" class="action-btn" style="border-color: #ff00ff; color: #ff00ff; font-size: 14px; padding: 12px 30px; margin-top: 15px;">КРУТИТЬ (50 🪙)</button>
-            <button class="close-modal-btn roulette-close-btn">ЗАКРЫТЬ</button>
+        <div id="roulette-modal" class="modal roulette-modal casino-modal" style="display: none;">
+    <h2 style="color: #ff00ff; text-shadow: 0 0 10px #ff00ff;">🎰 КАЗИНО «DINO LUCK»</h2>
+    <div class="casino-stats">
+        🪙 <span id="casino-coins-display">0</span>
+        <span class="casino-stats-mini" id="casino-wagered">Поставлено: 0</span>
+        <span class="casino-stats-mini" id="casino-won">Выиграно: 0</span>
+    </div>
+
+    <div class="casino-tabs">
+        <button class="casino-tab-btn active" data-tab="roulette">🎰 Рулетка</button>
+        <button class="casino-tab-btn" data-tab="coinflip">🪙 Монетка</button>
+        <button class="casino-tab-btn" data-tab="dice">🎲 Кости</button>
+        <button class="casino-tab-btn" data-tab="jackpot">💎 Джекпот</button>
+    </div>
+
+    <!-- РУЛЕТКА -->
+    <div class="casino-panel active" data-panel="roulette">
+        <p style="color: #aaa; font-size: 12px; margin: 10px 0;">Ставка: <strong style="color:#ffd700;">50 🪙</strong></p>
+        <div class="roulette-slots">
+            <div class="roulette-slot" id="slot-1">🎁</div>
+            <div class="roulette-slot" id="slot-2">🎁</div>
+            <div class="roulette-slot" id="slot-3">🎁</div>
         </div>
+        <div id="roulette-result" class="roulette-result" style="display:none;"></div>
+        <button id="roulette-spin-btn" class="action-btn" style="border-color: #ff00ff; color: #ff00ff; font-size: 14px; padding: 12px 30px; margin-top: 15px;">КРУТИТЬ (50 🪙)</button>
+    </div>
+
+    <!-- МОНЕТКА -->
+    <div class="casino-panel" data-panel="coinflip" style="display:none;">
+        <p style="color: #aaa; font-size: 12px; margin: 10px 0;">Ставка: <strong style="color:#ffd700;">25 🪙</strong> · Выигрыш: <strong style="color:#00ff88;">x2</strong></p>
+        <div class="coin-flip-display" id="coin-flip-display">🪙</div>
+        <div id="coinflip-result" class="roulette-result" style="display:none;"></div>
+        <div style="display:flex; gap:10px; justify-content:center; margin-top:15px; flex-wrap:wrap;">
+            <button id="coinflip-heads-btn" class="action-btn" style="border-color:#ffd700; color:#ffd700;">👑 ОРЁЛ (25 🪙)</button>
+            <button id="coinflip-tails-btn" class="action-btn" style="border-color:#00ffff; color:#00ffff;">🪙 РЕШКА (25 🪙)</button>
+        </div>
+    </div>
+
+    <!-- КОСТИ -->
+    <div class="casino-panel" data-panel="dice" style="display:none;">
+        <p style="color: #aaa; font-size: 12px; margin: 10px 0;">Ставка: <strong style="color:#ffd700;">10 🪙</strong> · Выигрыш: <strong style="color:#00ff88;">x5</strong></p>
+        <div class="dice-display" id="dice-display">🎲</div>
+        <div class="dice-grid" id="dice-grid">
+            <button class="dice-btn" data-value="1">1</button>
+            <button class="dice-btn" data-value="2">2</button>
+            <button class="dice-btn" data-value="3">3</button>
+            <button class="dice-btn" data-value="4">4</button>
+            <button class="dice-btn" data-value="5">5</button>
+            <button class="dice-btn" data-value="6">6</button>
+        </div>
+        <div id="dice-result" class="roulette-result" style="display:none;"></div>
+        <button id="dice-roll-btn" class="action-btn" style="border-color:#00ff88; color:#00ff88; margin-top:15px;">БРОСИТЬ (10 🪙)</button>
+    </div>
+
+    <!-- ДЖЕКПОТ -->
+    <div class="casino-panel" data-panel="jackpot" style="display:none;">
+        <p style="color: #aaa; font-size: 12px; margin: 10px 0;">Ставка: <strong style="color:#ffd700;">150 🪙</strong> · Шанс на <strong style="color:#ff00ff;">ДЖЕКПОТ</strong></p>
+        <div class="roulette-slots">
+            <div class="roulette-slot" id="jackpot-slot-1">💎</div>
+            <div class="roulette-slot" id="jackpot-slot-2">💎</div>
+            <div class="roulette-slot" id="jackpot-slot-3">💎</div>
+        </div>
+        <div id="jackpot-result" class="roulette-result" style="display:none;"></div>
+        <button id="jackpot-spin-btn" class="action-btn" style="border-color: #ff00ff; color: #ff00ff; font-size: 14px; padding: 12px 30px; margin-top: 15px;">КРУТИТЬ (150 🪙)</button>
+    </div>
+
+    <button class="close-modal-btn roulette-close-btn">ЗАКРЫТЬ</button>
+</div>
 
         <div id="trail-modal" class="modal" style="display: none; border-color: #00ffff; box-shadow: 0 0 50px rgba(0,255,255,0.4);">
             <h2 style="color: #00ffff; text-shadow: 0 0 10px #00ffff;">🎨 ВЫБОР ШЛЕЙФА</h2>

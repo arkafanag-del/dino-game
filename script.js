@@ -395,7 +395,8 @@ const TRAILS = [
   { id: '', icon: '🚫', name: 'Без шлейфа' },
   { id: 'fire', icon: '🔥', name: 'Огонь' },
   { id: 'neon', icon: '💠', name: 'Неон' },
-  { id: 'gold', icon: '⭐', name: 'Золото' }
+  { id: 'gold', icon: '⭐', name: 'Золото' },
+  { id: 'rainbow', icon: '🌈', name: 'Радуга', legendary: true }
 ];
 
 let unlockedTrails = JSON.parse(localStorage.getItem('dino_trails_unlocked') || '[]');
@@ -493,8 +494,8 @@ function spinRoulette() {
   }, 60);
 }
 
-function applyPrize(prize) {
-  let resultText = `🎉 ВЫИГРЫШ: ${prize.label}`;
+function applyPrize(prize, resultEl = rouletteResult) {
+    let resultText = `🎉 ВЫИГРЫШ: ${prize.label}`;
   if (prize.type === 'coins') {
     coins += prize.value;
     localStorage.setItem('dino_coins', coins);
@@ -525,8 +526,10 @@ function applyPrize(prize) {
     setActiveTrail(prize.value);
     resultText = `🎉 ВЫИГРЫШ: Шлейф "${prize.label}" (активирован!)`;
   }
-  rouletteResult.textContent = resultText;
-  rouletteResult.style.display = 'block';
+    resultEl.textContent = resultText;
+    resultEl.style.display = 'block';
+    resultEl.style.color = '#ffd700';
+    resultEl.style.borderColor = '#ffd700';
   playSFX('buy');
   updateShopUI();
   saveProfileToServer();
@@ -538,12 +541,23 @@ function applyPrize(prize) {
   }, 1500);
 }
 
-rouletteSpinBtn.onclick = () => spinRoulette();
 rouletteBtn.onclick = () => {
-  playSFX('click');
-  rouletteResult.style.display = 'none';
-  rouletteSlots.forEach(slot => { slot.textContent = '🎁'; slot.classList.remove('win', 'spinning'); });
-  rouletteModal.style.display = 'block';
+    playSFX('click');
+    // Сброс всех игр
+    rouletteResult.style.display = 'none';
+    rouletteSlots.forEach(slot => { slot.textContent = '🎁'; slot.classList.remove('win', 'spinning'); });
+    jackpotSlot1.textContent = '💎'; jackpotSlot2.textContent = '💎'; jackpotSlot3.textContent = '💎';
+    jackpotResult.style.display = 'none';
+    coinFlipResult.style.display = 'none';
+    coinFlipDisplay.textContent = '🪙';
+    diceResult.style.display = 'none';
+    diceDisplay.textContent = '🎲';
+    selectedDiceValue = null;
+    diceGrid.querySelectorAll('.dice-btn').forEach(b => b.classList.remove('selected'));
+    
+    updateCasinoStatsDisplay();
+    switchCasinoTab('roulette');
+    rouletteModal.style.display = 'block';
 };
 
 // --- БИРЖА ДНК ---
@@ -1174,6 +1188,256 @@ closeBtns.forEach(b=>b.onclick=()=>{
   if (!isRouletteSpinning) rouletteModal.style.display='none'; 
 });
 
+// ═══════════════════════════════════════════════════════════
+// КАЗИНО «DINO LUCK» — 4 игры в одной модалке
+// ═══════════════════════════════════════════════════════════
+
+// --- DOM казино ---
+const casinoTabs = document.querySelectorAll('.casino-tab-btn');
+const casinoPanels = document.querySelectorAll('.casino-panel');
+const casinoCoinsDisplay = document.getElementById('casino-coins-display');
+const casinoWageredEl = document.getElementById('casino-wagered');
+const casinoWonEl = document.getElementById('casino-won');
+
+// Монетка
+const coinFlipDisplay = document.getElementById('coin-flip-display');
+const coinFlipHeadsBtn = document.getElementById('coinflip-heads-btn');
+const coinFlipTailsBtn = document.getElementById('coinflip-tails-btn');
+const coinFlipResult = document.getElementById('coinflip-result');
+
+// Кости
+const diceDisplay = document.getElementById('dice-display');
+const diceGrid = document.getElementById('dice-grid');
+const diceRollBtn = document.getElementById('dice-roll-btn');
+const diceResult = document.getElementById('dice-result');
+let selectedDiceValue = null;
+
+// Джекпот
+const jackpotSlot1 = document.getElementById('jackpot-slot-1');
+const jackpotSlot2 = document.getElementById('jackpot-slot-2');
+const jackpotSlot3 = document.getElementById('jackpot-slot-3');
+const jackpotSpinBtn = document.getElementById('jackpot-spin-btn');
+const jackpotResult = document.getElementById('jackpot-result');
+let isJackpotSpinning = false;
+
+// Статистика
+let casinoStats = JSON.parse(localStorage.getItem('dino_casino_stats') || '{"wagered":0,"won":0,"biggest":0}');
+function saveCasinoStats() { localStorage.setItem('dino_casino_stats', JSON.stringify(casinoStats)); }
+
+// --- Переключение вкладок ---
+function switchCasinoTab(tabId) {
+    casinoTabs.forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+    casinoPanels.forEach(p => {
+        const isActive = p.dataset.panel === tabId;
+        p.style.display = isActive ? 'block' : 'none';
+        p.classList.toggle('active', isActive);
+    });
+    updateCasinoCoinsDisplay();
+}
+
+function updateCasinoCoinsDisplay() {
+    if (casinoCoinsDisplay) casinoCoinsDisplay.textContent = coins;
+    if (coinFlipHeadsBtn) coinFlipHeadsBtn.disabled = coins < 25;
+    if (coinFlipTailsBtn) coinFlipTailsBtn.disabled = coins < 25;
+    if (diceRollBtn) diceRollBtn.disabled = coins < 10 || selectedDiceValue === null;
+    if (jackpotSpinBtn) jackpotSpinBtn.disabled = coins < 150 || isJackpotSpinning;
+}
+
+function updateCasinoStatsDisplay() {
+    if (casinoWageredEl) casinoWageredEl.textContent = `Поставлено: ${casinoStats.wagered} 🪙`;
+    if (casinoWonEl) casinoWonEl.textContent = `Выиграно: ${casinoStats.won} 🪙`;
+    updateCasinoCoinsDisplay();
+}
+
+casinoTabs.forEach(btn => {
+    btn.onclick = () => { playSFX('click'); switchCasinoTab(btn.dataset.tab); };
+});
+
+// --- 🪙 МОНЕТКА ---
+const COINFLIP_COST = 25;
+
+function playCoinFlip(choice) {
+    if (coins < COINFLIP_COST) { showToast('⚠️ Не хватает монет'); return; }
+    coins -= COINFLIP_COST;
+    casinoStats.wagered += COINFLIP_COST;
+    saveCasinoStats();
+    coinsDisplay.textContent = `🪙 ${coins}`;
+    updateCasinoStatsDisplay();
+    saveProfileToServer();
+
+    coinFlipResult.style.display = 'none';
+    coinFlipDisplay.textContent = '⏳';
+    coinFlipDisplay.style.animation = 'spinFlip 0.6s ease-out';
+
+    setTimeout(() => {
+        coinFlipDisplay.style.animation = 'none';
+        const result = Math.random() < 0.5 ? 'heads' : 'tails';
+        coinFlipDisplay.textContent = result === 'heads' ? '👑' : '🪙';
+
+        if (result === choice) {
+            const prize = COINFLIP_COST * 2;
+            coins += prize;
+            casinoStats.won += prize;
+            saveCasinoStats();
+            coinsDisplay.textContent = `🪙 ${coins}`;
+            coinFlipResult.textContent = `🎉 УГАДАЛ! +${prize} 🪙`;
+            coinFlipResult.style.color = '#00ff88';
+            coinFlipResult.style.borderColor = '#00ff88';
+            playSFX('buy');
+        } else {
+            coinFlipResult.textContent = `😢 Не угадал. -${COINFLIP_COST} 🪙`;
+            coinFlipResult.style.color = '#ff2a2a';
+            coinFlipResult.style.borderColor = '#ff2a2a';
+            playSFX('death');
+        }
+        coinFlipResult.style.display = 'block';
+        updateCasinoStatsDisplay();
+        saveProfileToServer();
+    }, 600);
+}
+
+coinFlipHeadsBtn.onclick = () => playCoinFlip('heads');
+coinFlipTailsBtn.onclick = () => playCoinFlip('tails');
+
+// --- 🎲 КОСТИ ---
+const DICE_COST = 10;
+
+diceGrid.querySelectorAll('.dice-btn').forEach(btn => {
+    btn.onclick = () => {
+        selectedDiceValue = parseInt(btn.dataset.value);
+        diceGrid.querySelectorAll('.dice-btn').forEach(b => b.classList.toggle('selected', b === btn));
+        updateCasinoCoinsDisplay();
+        playSFX('click');
+    };
+});
+
+diceRollBtn.onclick = () => {
+    if (selectedDiceValue === null) { showToast('⚠️ Выбери число'); return; }
+    if (coins < DICE_COST) { showToast('⚠️ Не хватает монет'); return; }
+
+    coins -= DICE_COST;
+    casinoStats.wagered += DICE_COST;
+    saveCasinoStats();
+    coinsDisplay.textContent = `🪙 ${coins}`;
+    updateCasinoStatsDisplay();
+    saveProfileToServer();
+
+    diceResult.style.display = 'none';
+    let ticks = 0;
+    const interval = setInterval(() => {
+        diceDisplay.textContent = '🎲';
+        diceDisplay.style.transform = `rotate(${Math.random() * 360}deg) scale(${0.9 + Math.random() * 0.3})`;
+        ticks++;
+        if (ticks > 15) {
+            clearInterval(interval);
+            diceDisplay.style.transform = 'none';
+            const rolled = Math.floor(Math.random() * 6) + 1;
+            diceDisplay.textContent = ['⚀','⚁','⚂','⚃','⚄','⚅'][rolled - 1];
+
+            if (rolled === selectedDiceValue) {
+                const prize = DICE_COST * 5;
+                coins += prize;
+                casinoStats.won += prize;
+                saveCasinoStats();
+                coinsDisplay.textContent = `🪙 ${coins}`;
+                diceResult.textContent = `🎉 УГАДАЛ ${rolled}! +${prize} 🪙`;
+                diceResult.style.color = '#00ff88';
+                diceResult.style.borderColor = '#00ff88';
+                playSFX('buy');
+            } else {
+                diceResult.textContent = `😢 Выпало ${rolled}. -${DICE_COST} 🪙`;
+                diceResult.style.color = '#ff2a2a';
+                diceResult.style.borderColor = '#ff2a2a';
+                playSFX('death');
+            }
+            diceResult.style.display = 'block';
+            updateCasinoStatsDisplay();
+            saveProfileToServer();
+        }
+    }, 60);
+};
+
+// --- 💎 ДЖЕКПОТ ---
+const JACKPOT_COST = 150;
+
+const JACKPOT_PRIZES = [
+    { icon:'🪙', label:'+100 🪙',        weight:25, type:'coins', value:100 },
+    { icon:'🪙', label:'+300 🪙',        weight:20, type:'coins', value:300 },
+    { icon:'💰', label:'+750 🪙',        weight:10, type:'coins', value:750 },
+    { icon:'🧬', label:'+50 🧬',         weight:20, type:'dna',   value:50  },
+    { icon:'🧪', label:'+150 🧬',        weight:10, type:'dna',   value:150 },
+    { icon:'🔥', label:'Шлейф Огонь',     weight:5,  type:'trail', value:'fire' },
+    { icon:'💠', label:'Шлейф Неон',      weight:5,  type:'trail', value:'neon' },
+    { icon:'⭐', label:'Шлейф Золото',    weight:3,  type:'trail', value:'gold' },
+    { icon:'🌈', label:'ЛЕГЕНДАРНЫЙ Шлейф', weight:1, type:'trail', value:'rainbow' },
+    { icon:'💎', label:'ДЖЕКПОТ! +2000 🪙', weight:1, type:'coins', value:2000 }
+];
+
+function pickJackpotPrize() {
+    const total = JACKPOT_PRIZES.reduce((s, p) => s + p.weight, 0);
+    let r = Math.random() * total;
+    for (const p of JACKPOT_PRIZES) { r -= p.weight; if (r <= 0) return p; }
+    return JACKPOT_PRIZES[0];
+}
+
+jackpotSpinBtn.onclick = () => {
+    if (isJackpotSpinning) return;
+    if (coins < JACKPOT_COST) { showToast('⚠️ Нужно 150 🪙'); return; }
+
+    coins -= JACKPOT_COST;
+    casinoStats.wagered += JACKPOT_COST;
+    saveCasinoStats();
+    coinsDisplay.textContent = `🪙 ${coins}`;
+    updateCasinoStatsDisplay();
+    saveProfileToServer();
+
+    isJackpotSpinning = true;
+    jackpotSpinBtn.disabled = true;
+    jackpotSpinBtn.textContent = 'КРУТИМ...';
+    jackpotResult.style.display = 'none';
+
+    const winner = pickJackpotPrize();
+    const slots = [jackpotSlot1, jackpotSlot2, jackpotSlot3];
+    slots.forEach(s => { s.classList.add('spinning'); s.classList.remove('win'); });
+
+    let ticks = 0;
+    const interval = setInterval(() => {
+        ticks++;
+        slots.forEach(s => {
+            const rnd = JACKPOT_PRIZES[Math.floor(Math.random() * JACKPOT_PRIZES.length)];
+            s.textContent = rnd.icon;
+        });
+        if (ticks >= 50) {
+            clearInterval(interval);
+            slots.forEach(s => { s.classList.remove('spinning'); s.classList.add('win'); s.textContent = winner.icon; });
+            playSFX('buy');
+
+            if (winner.type === 'trail' && winner.value === 'rainbow') {
+                if (!unlockedTrails.includes('rainbow')) {
+                    unlockedTrails.push('rainbow');
+                    localStorage.setItem('dino_trails_unlocked', JSON.stringify(unlockedTrails));
+                }
+                setActiveTrail('rainbow');
+                jackpotResult.textContent = `🌈 ДЖЕКПОТ! Легендарный шлейф «Радуга» активирован!`;
+                jackpotResult.style.color = '#ff00ff';
+                jackpotResult.style.borderColor = '#ff00ff';
+                jackpotResult.style.display = 'block';
+            } else {
+                applyPrize(winner, jackpotResult);
+            }
+
+            if (winner.type === 'coins') casinoStats.won += winner.value;
+            if (winner.type === 'dna') casinoStats.won += winner.value * 5;
+            saveCasinoStats();
+
+            setTimeout(() => {
+                isJackpotSpinning = false;
+                updateCasinoStatsDisplay();
+            }, 1500);
+        }
+    }, 50);
+};
+
 skinsBtn.onclick=()=>{ playSFX('click'); renderSkins(); skinsModal.style.display='block'; };
 
 dailyChallengeBtn.onclick = () => {
@@ -1694,6 +1958,7 @@ function initRun(daily=false){
   invincibleUntil = Date.now()+2000;
   highScore = parseInt(localStorage.getItem(daily?'dino_daily_hs':'dino_highscore'))||0;
   highScoreDisplay.textContent=`HI ${String(highScore).padStart(5,'0')}`;
+  updateCasinoStatsDisplay();
 }
 
 function startGame(daily=false){
