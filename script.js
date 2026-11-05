@@ -5,10 +5,13 @@ const coinsContainer = document.getElementById('coins-container');
 const bossContainer = document.getElementById('boss-container');
 const powerupsContainer = document.getElementById('powerups-container');
 const cloudsContainer = document.getElementById('clouds');
+const trailContainer = document.getElementById('trail-container');
 const scoreDisplay = document.getElementById('score');
 const highScoreDisplay = document.getElementById('high-score');
 const coinsDisplay = document.getElementById('coins-display');
 const dnaDisplay = document.getElementById('dna-display');
+const loopBadge = document.getElementById('loop-badge');
+const godBadge = document.getElementById('god-badge');
 const livesDisplay = document.getElementById('lives-display');
 const eventBanner = document.getElementById('event-banner');
 const gameContainer = document.querySelector('.game-container');
@@ -20,6 +23,7 @@ const bossHpFill = document.getElementById('boss-hp-fill');
 const bossName = document.getElementById('boss-name');
 const comboDisplay = document.getElementById('combo-display');
 const activeBuffsUI = document.getElementById('active-buffs');
+const activeArtifactsUI = document.getElementById('active-artifacts');
 const gameMenu = document.getElementById('game-menu');
 const menuTitle = document.getElementById('menu-title');
 const menuText = document.getElementById('menu-text');
@@ -28,6 +32,8 @@ const startBiomeSelect = document.getElementById('start-biome-select');
 const skillModal = document.getElementById('skill-modal');
 const skinsModal = document.getElementById('skins-modal');
 const dailyChallengeBtn = document.getElementById('daily-challenge-btn');
+const dailyBadge = document.getElementById('daily-badge');
+const godModeBtn = document.getElementById('god-mode-btn');
 const skillBtn = document.getElementById('skill-btn');
 const skinsBtn = document.getElementById('skins-btn');
 const skinsGrid = document.getElementById('skins-grid');
@@ -43,13 +49,631 @@ const muteBtn = document.getElementById('mute-btn');
 const playerNameInput = document.getElementById('player-name-input');
 const saveRecordBtn = document.getElementById('save-record-btn');
 
-// Сюжетка DOM
+const rouletteBtn = document.getElementById('roulette-btn');
+const rouletteModal = document.getElementById('roulette-modal');
+const rouletteSpinBtn = document.getElementById('roulette-spin-btn');
+const rouletteResult = document.getElementById('roulette-result');
+const rouletteSlots = [document.getElementById('slot-1'), document.getElementById('slot-2'), document.getElementById('slot-3')];
+const rouletteCloseBtn = document.querySelector('.roulette-close-btn');
+const trailBtn = document.getElementById('trail-btn');
+const trailModal = document.getElementById('trail-modal');
+const trailGrid = document.getElementById('trail-grid');
+
+const exchangeBtn = document.getElementById('exchange-btn');
+const exchangeModal = document.getElementById('exchange-modal');
+const exchangeCloseBtn = document.querySelector('.exchange-close-btn');
+const exchangeRateDisplay = document.getElementById('exchange-rate-display');
+const exchangeCoinsEl = document.getElementById('exchange-coins');
+const exchangeDnaEl = document.getElementById('exchange-dna');
+const exchangeBuyBtn = document.getElementById('exchange-buy-btn');
+const exchangeSellBtn = document.getElementById('exchange-sell-btn');
+
+const petsBtn = document.getElementById('pets-btn');
+const petsModal = document.getElementById('pets-modal');
+const petsCloseBtn = document.querySelector('.pets-close-btn');
+const dogCard = document.getElementById('dog-card');
+const dogLevelDisplay = document.getElementById('dog-level-display');
+const dogStatsDisplay = document.getElementById('dog-stats-display');
+const dogUpgradeBtn = document.getElementById('dog-upgrade-btn');
+const droneCard = document.getElementById('drone-card');
+const droneLevelDisplay = document.getElementById('drone-level-display');
+const droneStatsDisplay = document.getElementById('drone-stats-display');
+const droneUpgradeBtn = document.getElementById('drone-upgrade-btn');
+
+// Мировой босс
+const worldBossBtn = document.getElementById('world-boss-btn');
+const worldBossModal = document.getElementById('world-boss-modal');
+const worldBossCloseBtn = document.querySelector('.world-boss-close-btn');
+const worldBossTitle = document.getElementById('world-boss-title');
+const worldBossHpFill = document.getElementById('world-boss-hp-fill');
+const worldBossHpText = document.getElementById('world-boss-hp-text');
+const worldBossStatus = document.getElementById('world-boss-status');
+const worldBossYourDamage = document.getElementById('world-boss-your-damage');
+const worldBossTopList = document.getElementById('world-boss-top-list');
+const worldBossClaimBtn = document.getElementById('world-boss-claim-btn');
+const worldBossRefreshBtn = document.getElementById('world-boss-refresh-btn');
+const inGameWorldBossBar = document.getElementById('world-boss-bar');
+const inGameWorldBossFill = document.getElementById('world-boss-fill');
+
 const storyModal = document.getElementById('story-modal');
 const storyTitle = document.getElementById('story-title');
 const storyText = document.getElementById('story-text');
 const storyNextBtn = document.getElementById('story-next-btn');
 
+const artifactModal = document.getElementById('artifact-modal');
+const artifactGrid = document.getElementById('artifact-grid');
+const altarModal = document.getElementById('altar-modal');
+const altarAcceptBtn = document.getElementById('altar-accept-btn');
+const altarDeclineBtn = document.getElementById('altar-decline-btn');
+
 const API_BASE = 'https://dino-game-backend-summer-tide-6155.fly.dev';
+
+// --- МИРОВОЙ БОСС ---
+let currentWorldBossState = null;
+let pendingWorldBossDamage = 0;
+let lastWorldBossFlush = Date.now();
+
+async function loadWorldBoss() {
+  try {
+    const url = playerName
+      ? `${API_BASE}/api/world-boss?name=${encodeURIComponent(playerName)}`
+      : `${API_BASE}/api/world-boss`;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error("Server error");
+    const d = await r.json();
+    currentWorldBossState = d;
+    updateWorldBossUI();
+  } catch(e) {
+    console.error('World boss load failed', e);
+    if (worldBossStatus) worldBossStatus.innerHTML = '<span style="color:#ff2a2a">Сервер недоступен ❌</span>';
+  }
+}
+
+function updateWorldBossUI() {
+  if (!currentWorldBossState) return;
+  if (isGameRunning && !currentWorldBossState.killed && inGameWorldBossBar) {
+    inGameWorldBossBar.style.display = 'block';
+    const pct = currentWorldBossState.max_hp > 0
+      ? (currentWorldBossState.current_hp / currentWorldBossState.max_hp * 100)
+      : 0;
+    inGameWorldBossFill.style.width = pct + '%';
+  } else if (inGameWorldBossBar) {
+    inGameWorldBossBar.style.display = 'none';
+  }
+  if (worldBossModal.style.display === 'block') {
+    renderWorldBossModal();
+  }
+}
+
+function renderWorldBossModal() {
+  const s = currentWorldBossState;
+  if (!s) return;
+  worldBossTitle.textContent = `🌍 МИРОВОЙ БОСС (${s.week_key})`;
+  const pct = s.max_hp > 0 ? (s.current_hp / s.max_hp * 100) : 0;
+  worldBossHpFill.style.width = pct + '%';
+  worldBossHpText.textContent = `${s.current_hp.toLocaleString()} / ${s.max_hp.toLocaleString()} HP`;
+  
+  let statusHtml = '';
+  if (s.killed) {
+    statusHtml = `🎉 <span style="color:#00ff88">БОСС ПОБЕЖДЁН!</span><br><span style="color:#aaa; font-size:11px;">Убил: ${escapeHTML(s.killed_by || '—')}</span>`;
+    if (s.reward_claimed) {
+      statusHtml += `<br><span style="color:#ffd700; font-size:11px;">✅ Награда уже получена</span>`;
+    }
+  } else {
+    statusHtml = `<span style="color:#ff00ff">⚔️ Играйте и наносите урон!</span><br><span style="color:#aaa; font-size:11px;">1 очко в игре = 1 урон</span>`;
+  }
+  worldBossStatus.innerHTML = statusHtml;
+  
+  worldBossYourDamage.textContent = (s.player_damage || 0).toLocaleString();
+  
+  if (s.top_damage && s.top_damage.length > 0) {
+    let html = '';
+    s.top_damage.forEach((e, i) => {
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`;
+      html += `<div class="wb-top-row"><span class="wb-top-rank">${medal}</span><span class="wb-top-name">${escapeHTML(e.name)}</span><span class="wb-top-damage">${e.damage.toLocaleString()}</span></div>`;
+    });
+    worldBossTopList.innerHTML = html;
+  } else {
+    worldBossTopList.innerHTML = '<div style="color:#888; text-align:center;">Пока никто не атаковал</div>';
+  }
+  
+  if (s.killed && s.player_damage > 0 && !s.reward_claimed && playerName) {
+    worldBossClaimBtn.style.display = 'inline-block';
+  } else {
+    worldBossClaimBtn.style.display = 'none';
+  }
+}
+
+async function flushWorldBossDamage() {
+  if (pendingWorldBossDamage <= 0 || !playerName || !currentWorldBossState || currentWorldBossState.killed) {
+    if (pendingWorldBossDamage > 0 && (!currentWorldBossState || currentWorldBossState.killed)) {
+      pendingWorldBossDamage = 0;
+    }
+    return;
+  }
+  const dmg = Math.floor(pendingWorldBossDamage);
+  if (dmg <= 0) return;
+  pendingWorldBossDamage = 0;
+  lastWorldBossFlush = Date.now();
+  try {
+    const r = await fetch(`${API_BASE}/api/world-boss/damage`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name: playerName, damage: dmg })
+    });
+    if (!r.ok) {
+      pendingWorldBossDamage += dmg;
+      return;
+    }
+    const d = await r.json();
+    if (d.current_hp !== undefined && currentWorldBossState) {
+      const wasKilled = currentWorldBossState.killed;
+      currentWorldBossState.current_hp = d.current_hp;
+      currentWorldBossState.killed = d.killed;
+      if (d.killed && !wasKilled) {
+        currentWorldBossState.killed_by = d.killed_by || playerName;
+        showToast(`🎉 ВЫ НАНЕСЛИ ПОСЛЕДНИЙ УДАР!\nБосс убит. Награда в меню!`, true);
+      }
+      updateWorldBossUI();
+    }
+  } catch(e) {
+    pendingWorldBossDamage += dmg;
+  }
+}
+
+async function claimWorldBossReward() {
+  if (!playerName) { showToast('⚠️ Сначала сохраните имя'); return; }
+  try {
+    const r = await fetch(`${API_BASE}/api/world-boss/claim`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name: playerName })
+    });
+    const d = await r.json();
+    if (d.status === 'success') {
+      // БЕЗОПАСНО: прибавляем к текущему балансу, а не перезаписываем
+      coins += d.reward_coins;
+      dna += d.reward_dna || 0;
+      
+      localStorage.setItem('dino_coins', coins);
+      localStorage.setItem('dino_dna', dna);
+      coinsDisplay.textContent = `🪙 ${coins}`;
+      dnaDisplay.textContent = `🧬 ${dna}`;
+      playSFX('buy');
+      showToast(`🎁 НАГРАДА ПОЛУЧЕНА!\n+${d.reward_coins} 🪙 · +${d.reward_dna} 🧬`, true);
+      loadWorldBoss();
+      saveProfileToServer();
+    } else if (d.status === 'already_claimed') {
+      showToast('✅ Вы уже получили награду');
+    } else if (d.status === 'no_participation') {
+      showToast('⚠️ Вы не участвовали в этой неделе');
+    } else if (d.status === 'boss_alive') {
+      showToast('⚔️ Босс ещё жив!');
+    }
+  } catch(e) {
+    showToast('❌ Ошибка сети');
+  }
+}
+
+worldBossBtn.onclick = () => {
+  playSFX('click');
+  // Открываем сразу, чтобы игрок видел процесс загрузки
+  worldBossModal.style.display = 'block';
+  worldBossStatus.innerHTML = 'Загрузка...';
+  loadWorldBoss().then(() => {
+    renderWorldBossModal();
+  });
+};
+
+worldBossRefreshBtn.onclick = () => {
+  playSFX('click');
+  worldBossStatus.innerHTML = 'Загрузка...';
+  loadWorldBoss();
+};
+
+worldBossClaimBtn.onclick = () => claimWorldBossReward();
+
+// --- ПИТОМЦЫ ---
+let dogLevel = parseInt(localStorage.getItem('dino_dog_level')) || 1;
+let droneLevel = parseInt(localStorage.getItem('dino_drone_level')) || 1;
+
+const PET_UPGRADE_COSTS = { 2: 20, 3: 40, 4: 60, 5: 100 };
+const DOG_STATS = ['', 'Собирает монеты', 'Радиус сбора +66%', 'Лай: отпугивает птиц', 'Радиус сбора +133%', '🔥 Цербер: сжигает врагов'];
+const DRONE_STATS = ['', 'Стреляет по боссам', '+30% скорость стрельбы', 'Веер из 3 пуль', 'Урон по боссам x1.5', '⚡ Лазер (0.45 урона)'];
+
+let dogBarkTimer = 0;
+let dogFireTimer = 0;
+let droneLaserTimer = 0;
+
+function updatePetsUI() {
+  dogLevelDisplay.textContent = `Ур. ${dogLevel}`;
+  if (!hasDog) {
+    dogCard.classList.add('pet-locked');
+    dogStatsDisplay.innerHTML = '<div style="color:#888;">Сначала купите<br>в магазине<br>(300 🪙)</div>';
+    dogUpgradeBtn.disabled = true;
+    dogUpgradeBtn.textContent = 'НЕ КУПЛЕН';
+  } else if (dogLevel >= 5) {
+    dogCard.classList.remove('pet-locked');
+    let html = '';
+    for (let i = 1; i <= 5; i++) html += `<div style="color:#00ff88">✓ Lv.${i}: ${DOG_STATS[i]}</div>`;
+    dogStatsDisplay.innerHTML = html;
+    dogUpgradeBtn.disabled = true;
+    dogUpgradeBtn.textContent = 'МАКС. УРОВЕНЬ';
+  } else {
+    dogCard.classList.remove('pet-locked');
+    let html = '';
+    for (let i = 1; i <= dogLevel; i++) html += `<div style="color:#00ff88">✓ Lv.${i}: ${DOG_STATS[i]}</div>`;
+    html += `<div style="color:#ffd700; margin-top:5px;">▶ Lv.${dogLevel+1}: ${DOG_STATS[dogLevel+1]}</div>`;
+    dogStatsDisplay.innerHTML = html;
+    const cost = PET_UPGRADE_COSTS[dogLevel + 1];
+    dogUpgradeBtn.disabled = dna < cost;
+    dogUpgradeBtn.textContent = `УЛУЧШИТЬ (${cost} 🧬)`;
+  }
+  
+  droneLevelDisplay.textContent = `Ур. ${droneLevel}`;
+  if (!hasPet) {
+    droneCard.classList.add('pet-locked');
+    droneStatsDisplay.innerHTML = '<div style="color:#888;">Сначала купите<br>в магазине<br>(200 🪙)</div>';
+    droneUpgradeBtn.disabled = true;
+    droneUpgradeBtn.textContent = 'НЕ КУПЛЕН';
+  } else if (droneLevel >= 5) {
+    droneCard.classList.remove('pet-locked');
+    let html = '';
+    for (let i = 1; i <= 5; i++) html += `<div style="color:#00ff88">✓ Lv.${i}: ${DRONE_STATS[i]}</div>`;
+    droneStatsDisplay.innerHTML = html;
+    droneUpgradeBtn.disabled = true;
+    droneUpgradeBtn.textContent = 'МАКС. УРОВЕНЬ';
+  } else {
+    droneCard.classList.remove('pet-locked');
+    let html = '';
+    for (let i = 1; i <= droneLevel; i++) html += `<div style="color:#00ff88">✓ Lv.${i}: ${DRONE_STATS[i]}</div>`;
+    html += `<div style="color:#ffd700; margin-top:5px;">▶ Lv.${droneLevel+1}: ${DRONE_STATS[droneLevel+1]}</div>`;
+    droneStatsDisplay.innerHTML = html;
+    const cost = PET_UPGRADE_COSTS[droneLevel + 1];
+    droneUpgradeBtn.disabled = dna < cost;
+    droneUpgradeBtn.textContent = `УЛУЧШИТЬ (${cost} 🧬)`;
+  }
+}
+
+function upgradePet(type) {
+  let currentLevel = type === 'dog' ? dogLevel : droneLevel;
+  if (currentLevel >= 5) return;
+  const cost = PET_UPGRADE_COSTS[currentLevel + 1];
+  if (dna < cost) { showToast('⚠️ Не хватает ДНК'); return; }
+  dna -= cost;
+  localStorage.setItem('dino_dna', dna);
+  dnaDisplay.textContent = `🧬 ${dna}`;
+  if (type === 'dog') {
+    dogLevel++;
+    localStorage.setItem('dino_dog_level', dogLevel);
+    showToast(`🐕 Собачка прокачана до Lv.${dogLevel}!`);
+  } else {
+    droneLevel++;
+    localStorage.setItem('dino_drone_level', droneLevel);
+    showToast(`🛸 Дрон прокачан до Lv.${droneLevel}!`);
+  }
+  playSFX('buy');
+  updatePetsUI();
+  saveProfileToServer();
+}
+
+dogUpgradeBtn.onclick = () => upgradePet('dog');
+droneUpgradeBtn.onclick = () => upgradePet('drone');
+
+petsBtn.onclick = () => {
+  playSFX('click');
+  updatePetsUI();
+  petsModal.style.display = 'block';
+};
+
+// --- БЕССМЕРТИЕ ---
+let isGodMode = localStorage.getItem('dino_god_mode') === 'true';
+
+function updateGodModeUI() {
+  if (isGodMode) {
+    godModeBtn.textContent = '👻 БЕССМЕРТИЕ: ВКЛ';
+    godModeBtn.classList.add('on');
+    godBadge.style.display = 'inline-block';
+    godBadge.textContent = '👻';
+    player.classList.add('god-mode-active');
+  } else {
+    godModeBtn.textContent = '💀 БЕССМЕРТИЕ: ВЫКЛ';
+    godModeBtn.classList.remove('on');
+    godBadge.style.display = 'none';
+    player.classList.remove('god-mode-active');
+  }
+}
+
+godModeBtn.onclick = () => {
+  isGodMode = !isGodMode;
+  localStorage.setItem('dino_god_mode', isGodMode);
+  playSFX('click');
+  updateGodModeUI();
+  showToast(isGodMode ? '👻 БЕССМЕРТИЕ ВКЛЮЧЕНО' : '💀 БЕССМЕРТИЕ ВЫКЛЮЧЕНО');
+};
+
+// --- ШЛЕЙФЫ ---
+const TRAILS = [
+  { id: '', icon: '🚫', name: 'Без шлейфа' },
+  { id: 'fire', icon: '🔥', name: 'Огонь' },
+  { id: 'neon', icon: '💠', name: 'Неон' },
+  { id: 'gold', icon: '⭐', name: 'Золото' }
+];
+
+let unlockedTrails = JSON.parse(localStorage.getItem('dino_trails_unlocked') || '[]');
+let activeTrail = localStorage.getItem('dino_active_trail') || '';
+
+function setActiveTrail(id) {
+  activeTrail = id;
+  localStorage.setItem('dino_active_trail', id);
+}
+
+function renderTrailPicker() {
+  trailGrid.innerHTML = '';
+  TRAILS.forEach(t => {
+    const isUnlocked = t.id === '' || unlockedTrails.includes(t.id);
+    const isActive = activeTrail === t.id;
+    const card = document.createElement('div');
+    card.className = `trail-card ${isActive ? 'active' : ''} ${!isUnlocked ? 'locked' : ''}`;
+    card.innerHTML = `<div class="trail-icon">${t.icon}</div><div class="trail-name">${t.name}</div>`;
+    if (isUnlocked) {
+      card.onclick = () => {
+        playSFX('click');
+        setActiveTrail(t.id);
+        renderTrailPicker();
+      };
+    } else {
+      card.innerHTML += `<div style="font-size:9px;color:#888;margin-top:4px;">🔒 Рулетка</div>`;
+    }
+    trailGrid.appendChild(card);
+  });
+}
+
+trailBtn.onclick = () => {
+  playSFX('click');
+  renderTrailPicker();
+  trailModal.style.display = 'block';
+};
+
+// --- РУЛЕТКА ---
+const ROULETTE_PRIZES = [
+  { id: 'coins_30', icon: '🪙', label: '+30 🪙', weight: 30, type: 'coins', value: 30 },
+  { id: 'coins_75', icon: '💰', label: '+75 🪙', weight: 20, type: 'coins', value: 75 },
+  { id: 'coins_150', icon: '💎', label: '+150 🪙', weight: 5, type: 'coins', value: 150 },
+  { id: 'dna_10', icon: '🧬', label: '+10 🧬', weight: 20, type: 'dna', value: 10 },
+  { id: 'dna_30', icon: '🧪', label: '+30 🧬', weight: 5, type: 'dna', value: 30 },
+  { id: 'skin_raptor', icon: '🦅', label: 'Раптор', weight: 5, type: 'skin', value: 'raptor' },
+  { id: 'skin_ptero', icon: '🦇', label: 'Птеродактиль', weight: 2, type: 'skin', value: 'ptero' },
+  { id: 'trail_fire', icon: '🔥', label: 'Огонь', weight: 5, type: 'trail', value: 'fire' },
+  { id: 'trail_neon', icon: '💠', label: 'Неон', weight: 5, type: 'trail', value: 'neon' },
+  { id: 'trail_gold', icon: '⭐', label: 'Золото', weight: 3, type: 'trail', value: 'gold' }
+];
+
+let isRouletteSpinning = false;
+
+function pickRandomPrize() {
+  const total = ROULETTE_PRIZES.reduce((s, p) => s + p.weight, 0);
+  let r = Math.random() * total;
+  for (const p of ROULETTE_PRIZES) {
+    r -= p.weight;
+    if (r <= 0) return p;
+  }
+  return ROULETTE_PRIZES[0];
+}
+
+function spinRoulette() {
+  if (isRouletteSpinning) return;
+  if (coins < 50) { showToast('⚠️ Нужно 50 🪙'); return; }
+  coins -= 50;
+  coinsDisplay.textContent = `🪙 ${coins}`;
+  localStorage.setItem('dino_coins', coins);
+  saveProfileToServer();
+  isRouletteSpinning = true;
+  rouletteSpinBtn.disabled = true;
+  rouletteSpinBtn.textContent = 'КРУТИМ...';
+  rouletteResult.style.display = 'none';
+  const winner = pickRandomPrize();
+  rouletteSlots.forEach(slot => { slot.classList.add('spinning'); slot.classList.remove('win'); });
+  let tickCount = 0;
+  const totalTicks = 40;
+  const interval = setInterval(() => {
+    tickCount++;
+    rouletteSlots.forEach(slot => {
+      const randomPrize = ROULETTE_PRIZES[Math.floor(Math.random() * ROULETTE_PRIZES.length)];
+      slot.textContent = randomPrize.icon;
+    });
+    if (tickCount >= totalTicks) {
+      clearInterval(interval);
+      rouletteSlots.forEach(slot => {
+        slot.classList.remove('spinning');
+        slot.classList.add('win');
+        slot.textContent = winner.icon;
+      });
+      playSFX('buy');
+      setTimeout(() => applyPrize(winner), 500);
+    }
+  }, 60);
+}
+
+function applyPrize(prize) {
+  let resultText = `🎉 ВЫИГРЫШ: ${prize.label}`;
+  if (prize.type === 'coins') {
+    coins += prize.value;
+    localStorage.setItem('dino_coins', coins);
+    coinsDisplay.textContent = `🪙 ${coins}`;
+  } else if (prize.type === 'dna') {
+    dna += prize.value;
+    localStorage.setItem('dino_dna', dna);
+    dnaDisplay.textContent = `🧬 ${dna}`;
+  } else if (prize.type === 'skin') {
+    if (unlockedSkins.includes(prize.value)) {
+      coins += 30;
+      localStorage.setItem('dino_coins', coins);
+      coinsDisplay.textContent = `🪙 ${coins}`;
+      resultText = `🎉 Скин "${prize.label}" уже был. Компенсация: +30 🪙`;
+    } else {
+      unlockedSkins.push(prize.value);
+      selectedSkin = prize.value;
+      localStorage.setItem('dino_unlocked_skins', JSON.stringify(unlockedSkins));
+      localStorage.setItem('dino_selected_skin', selectedSkin);
+      updatePlayerSkin();
+      renderSkins();
+    }
+  } else if (prize.type === 'trail') {
+    if (!unlockedTrails.includes(prize.value)) {
+      unlockedTrails.push(prize.value);
+      localStorage.setItem('dino_trails_unlocked', JSON.stringify(unlockedTrails));
+    }
+    setActiveTrail(prize.value);
+    resultText = `🎉 ВЫИГРЫШ: Шлейф "${prize.label}" (активирован!)`;
+  }
+  rouletteResult.textContent = resultText;
+  rouletteResult.style.display = 'block';
+  playSFX('buy');
+  updateShopUI();
+  saveProfileToServer();
+  setTimeout(() => {
+    isRouletteSpinning = false;
+    rouletteSpinBtn.disabled = false;
+    rouletteSpinBtn.textContent = 'КРУТИТЬ (50 🪙)';
+    rouletteSlots.forEach(slot => slot.classList.remove('win'));
+  }, 1500);
+}
+
+rouletteSpinBtn.onclick = () => spinRoulette();
+rouletteBtn.onclick = () => {
+  playSFX('click');
+  rouletteResult.style.display = 'none';
+  rouletteSlots.forEach(slot => { slot.textContent = '🎁'; slot.classList.remove('win', 'spinning'); });
+  rouletteModal.style.display = 'block';
+};
+
+// --- БИРЖА ДНК ---
+function getExchangeRate() {
+  const dateKey = new Date().toISOString().slice(0,10);
+  const h = hashCode(dateKey);
+  return 4 + (Math.abs(h) % 12);
+}
+
+function updateExchangeUI() {
+  const rate = getExchangeRate();
+  const buyCost = rate * 10;
+  const sellGain = Math.floor(rate * 0.85 * 10);
+  exchangeRateDisplay.innerHTML = `Курс: 1 🧬 = <strong style="color:#ffd700">${rate}</strong> 🪙`;
+  exchangeBuyBtn.innerHTML = `КУПИТЬ 10 🧬 (${buyCost} 🪙)`;
+  exchangeSellBtn.innerHTML = `ПРОДАТЬ 10 🧬 (+${sellGain} 🪙)`;
+  exchangeCoinsEl.textContent = coins;
+  exchangeDnaEl.textContent = dna;
+  exchangeBuyBtn.disabled = coins < buyCost;
+  exchangeBuyBtn.style.opacity = coins < buyCost ? '0.4' : '1';
+  exchangeSellBtn.disabled = dna < 10;
+  exchangeSellBtn.style.opacity = dna < 10 ? '0.4' : '1';
+}
+
+exchangeBtn.onclick = () => { playSFX('click'); updateExchangeUI(); exchangeModal.style.display = 'block'; };
+
+exchangeBuyBtn.onclick = () => {
+  const rate = getExchangeRate();
+  const cost = rate * 10;
+  if (coins < cost) { showToast('⚠️ Не хватает монет'); return; }
+  coins -= cost;
+  dna += 10;
+  localStorage.setItem('dino_coins', coins);
+  localStorage.setItem('dino_dna', dna);
+  coinsDisplay.textContent = `🪙 ${coins}`;
+  dnaDisplay.textContent = `🧬 ${dna}`;
+  playSFX('buy');
+  showToast(`💱 КУПЛЕНО 10 🧬 за ${cost} 🪙`);
+  updateExchangeUI();
+  updateShopUI();
+  saveProfileToServer();
+};
+
+exchangeSellBtn.onclick = () => {
+  if (dna < 10) { showToast('⚠️ Не хватает ДНК'); return; }
+  const rate = getExchangeRate();
+  const gain = Math.floor(rate * 0.85 * 10);
+  dna -= 10;
+  coins += gain;
+  localStorage.setItem('dino_coins', coins);
+  localStorage.setItem('dino_dna', dna);
+  coinsDisplay.textContent = `🪙 ${coins}`;
+  dnaDisplay.textContent = `🧬 ${dna}`;
+  playSFX('buy');
+  showToast(`💱 ПРОДАНО 10 🧬 за ${gain} 🪙`);
+  updateExchangeUI();
+  updateShopUI();
+  saveProfileToServer();
+};
+
+// --- СПАВН ЧАСТИЦЫ ШЛЕЙФА ---
+let trailSpawnTimer = 0;
+
+function spawnTrailParticle() {
+  if (!activeTrail) return;
+  if (!isGameRunning) return;
+  const p = document.createElement('div');
+  p.className = `trail-particle ${activeTrail}`;
+  
+  // ИСПРАВЛЕНО: используем offsetLeft вместо getBoundingClientRect (для FPS)
+  const px = player.offsetLeft + player.offsetWidth * 0.3;
+  const py = yPosition + 20;
+  
+  p.style.left = px + 'px';
+  p.style.bottom = py + 'px';
+  trailContainer.appendChild(p);
+  setTimeout(() => p.remove(), 800);
+}
+
+function escapeHTML(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+const origRandom = Math.random;
+function mulberry32(seed) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function hashCode(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = Math.imul(31, h) + str.charCodeAt(i) | 0;
+  return h;
+}
+function setDailySeed(seed) {
+  if (seed === null) Math.random = origRandom;
+  else Math.random = mulberry32(seed);
+}
+
+// --- АРТЕФАКТЫ ---
+const ARTIFACTS = [
+  { id: 'vampire', icon: '🩸', name: 'Вампиризм', desc: 'Каждые 1000 очков восстанавливают 1 жизнь (макс 3).' },
+  { id: 'glass_cannon', icon: '💥', name: 'Стеклянная пушка', desc: 'Урон по боссам x3, но у вас остается только 1 сердце.' },
+  { id: 'black_hole', icon: '🧲', name: 'Черная дыра', desc: 'Магнит тянет монеты со всего экрана, монеты дают x2.' },
+  { id: 'chrono', icon: '⚡', name: 'Хроносдвиг', desc: 'При получении урона время замедляется на 2 секунды.' },
+  { id: 'berserk', icon: '🔥', name: 'Берсерк', desc: 'Скорость игры +20%, но монеты падают в 2 раза чаще.' }
+];
+let playerArtifacts = [];
+let hasGlassCannon = false;
+let timeWarpTimer = 0;
+
+// --- LOOP ---
+let loopCount = 1;
+let pendingLoopTransition = false;
+
+function getLoopBaseScore() {
+  return (loopCount - 1) * 1500;
+}
+
+function updateLoopBadge() {
+  if (loopCount > 1) {
+    loopBadge.textContent = `♾️ x${loopCount}`;
+    loopBadge.style.display = 'inline-block';
+  } else {
+    loopBadge.style.display = 'none';
+  }
+}
 
 // --- СЮЖЕТ ---
 const storyData = [
@@ -62,6 +686,7 @@ const storyData = [
 ];
 
 let pendingStoryTier = 0;
+let hasSeenIntro = false;
 
 function showStory(tier) {
   if (tier >= storyData.length) tier = storyData.length - 1;
@@ -73,34 +698,162 @@ function showStory(tier) {
   bgMusic.pause();
 }
 
+function showLoopStory() {
+  pendingStoryTier = 0;
+  storyTitle.innerHTML = `♾️ ПЕТЛЯ ${loopCount}`;
+  storyText.innerHTML = `Все 5 биомов пройдены! Но <strong>Ядро ДНК</strong> снова нестабильно.<br><br>Мир перезапускается:<br>⚡ Скорость <strong>+${((loopCount-1)*15)}%</strong><br>💀 HP боссов <strong>+${((loopCount-1)*50)}%</strong><br>🪙 Монеты <strong>x${(1 + (loopCount-1) * 0.25).toFixed(2)}</strong><br><br><em>Твои артефакты остаются с тобой.<br>Готов к новой петле?</em>`;
+  storyModal.style.display = 'block';
+  isGameRunning = false;
+  bgMusic.pause();
+}
+
 storyNextBtn.onclick = () => {
   playSFX('click');
   storyModal.style.display = 'none';
-  if (pendingStoryTier >= storyData.length - 1) endGame();
+  if (pendingLoopTransition) {
+    pendingLoopTransition = false;
+    startNewLoop();
+  } else if (pendingStoryTier >= storyData.length - 1) endGame();
   else startNextBiome(pendingStoryTier);
 };
 
 function startNextBiome(tier) {
   currentBiomeTier = tier;
-  nextBossScore = (currentBiomeTier + 1) * 300;
+  nextBossScore = getLoopBaseScore() + (currentBiomeTier + 1) * 300;
   gameContainer.className = `game-container biome-${['desert','jungle','ice','volcano','cyber'][currentBiomeTier] || 'cyber'}`;
-  
   if (currentBiomeTier > unlockedBiome && currentBiomeTier <= 4) { 
     unlockedBiome = currentBiomeTier; 
     localStorage.setItem('dino_unlocked_biome', unlockedBiome); 
     updateShopUI(); 
   }
-
   clearEntities();
   yPosition = 0; yVelocity = 0; isGrounded = true;
   player.style.bottom = '0px';
   spawnObstacleTimer = 0; spawnCoinTimer = 0; spawnPowerupTimer = 0;
+  spawnAltarTimer = 0;
+  dogBarkTimer = 0; dogFireTimer = 0; droneLaserTimer = 0;
   invincibleUntil = Date.now() + 2000;
-
+  nextEventTime = Date.now() + 60000; 
   playBiomeMusic(currentBiomeTier);
   isGameRunning = true;
   gameLoop();
 }
+
+function startNewLoop() {
+  currentBiomeTier = 0;
+  nextBossScore = getLoopBaseScore() + 300;
+  gameContainer.className = 'game-container biome-desert';
+  clearEntities();
+  yPosition = 0; yVelocity = 0; isGrounded = true;
+  player.style.bottom = '0px';
+  spawnObstacleTimer = 0; spawnCoinTimer = 0; spawnPowerupTimer = 0;
+  spawnAltarTimer = 0;
+  dogBarkTimer = 0; dogFireTimer = 0; droneLaserTimer = 0;
+  coinCap = 5;
+  currentEvent = null;
+  eventBanner.style.display = 'none';
+  nextEventTime = Date.now() + 60000;
+  lastEventType = null;
+  invincibleUntil = Date.now() + 2000;
+  hasShield = false; hasDoubleJump = false;
+  shieldTimer = 0; megaJumpTimer = 0;
+  activeBuffsUI.innerHTML = '';
+  isOverdrive = false;
+  gameContainer.classList.remove('overdrive');
+  resetCombo();
+  petDog.style.display = activeDog ? 'block' : 'none';
+  dogX = 50; dogY = 0;
+  playBiomeMusic(0);
+  updateLoopBadge();
+  isGameRunning = true;
+  gameLoop();
+}
+
+function showArtifactSelection() {
+  artifactGrid.innerHTML = '';
+  let available = [...ARTIFACTS].filter(a => !playerArtifacts.includes(a.id));
+  if (available.length === 0) available = ARTIFACTS;
+  available.sort(() => 0.5 - Math.random());
+  let choices = available.slice(0, 3);
+  choices.forEach(art => {
+    const card = document.createElement('div');
+    card.className = 'artifact-card';
+    card.innerHTML = `<div class="artifact-icon">${art.icon}</div><div class="artifact-name">${art.name}</div><div class="artifact-desc">${art.desc}</div>`;
+    card.onclick = () => {
+      playSFX('buy');
+      applyArtifact(art);
+      artifactModal.style.display = 'none';
+      if (pendingLoopTransition) showLoopStory();
+      else showStory(pendingStoryTier);
+    };
+    artifactGrid.appendChild(card);
+  });
+  artifactModal.style.display = 'block';
+  isGameRunning = false;
+}
+
+function applyArtifact(art) {
+  playerArtifacts.push(art.id);
+  if (art.id === 'glass_cannon') {
+    hasGlassCannon = true;
+    if (!isGodMode) {
+      currentHP = 1;
+      maxHP = 1;
+      if (livesDisplay) { livesDisplay.innerHTML = '❤️'; livesDisplay.style.display = 'none'; }
+    }
+  }
+  activeArtifactsUI.innerHTML = '';
+  playerArtifacts.forEach(id => {
+    const a = ARTIFACTS.find(x => x.id === id);
+    const icon = document.createElement('div');
+    icon.textContent = a.icon;
+    icon.title = a.name;
+    activeArtifactsUI.appendChild(icon);
+  });
+}
+
+let altarEntity = null;
+let spawnAltarTimer = 0;
+
+function spawnAltar() {
+  if (altarEntity) return;
+  const a = document.createElement('div');
+  a.className = 'altar';
+  let ax = gameContainer.offsetWidth;
+  a.style.left = ax + 'px';
+  powerupsContainer.appendChild(a);
+  altarEntity = { el: a, x: ax, y: 0, w: 50, h: 50 };
+}
+
+altarAcceptBtn.onclick = () => {
+  playSFX('buy');
+  altarModal.style.display = 'none';
+  if (isGodMode) {
+    showToast('👻 Бессмертие защитило вас от смерти');
+  } else if (!hasGlassCannon) {
+    currentHP--;
+    if (currentHP <= 0) { livesDisplay.innerHTML = ''; endGame(); return; }
+    livesDisplay.innerHTML = '❤️'.repeat(currentHP);
+  } else {
+    currentHP = 1; maxHP = 1; livesDisplay.innerHTML = '❤️';
+  }
+  for(let i=0; i<3; i++) {
+    let available = [...ARTIFACTS].filter(a => !playerArtifacts.includes(a.id));
+    if (available.length === 0) available = ARTIFACTS;
+    available.sort(() => 0.5 - Math.random());
+    applyArtifact(available[0]);
+  }
+  showToast("☠️ СДЕЛКА ЗАКЛЮЧЕНА!\nПолучено 3 артефакта.");
+  isGameRunning = true;
+  gameLoop();
+};
+
+altarDeclineBtn.onclick = () => {
+  playSFX('click');
+  altarModal.style.display = 'none';
+  isGameRunning = true;
+  gameLoop();
+};
 
 // --- ЗВУК ---
 let audioCtx, isMuted = false;
@@ -133,13 +886,16 @@ let coins=parseInt(localStorage.getItem('dino_coins'))||0;
 let dna=parseInt(localStorage.getItem('dino_dna'))||0;
 let unlockedBiome=parseInt(localStorage.getItem('dino_unlocked_biome'))||0;
 let isDailyMode=false;
-
 let hasShield=false;
 let hasDoubleJump=false;
+let shieldTimer=0;
+let megaJumpTimer=0;
 let playerName = localStorage.getItem('dino_player_name') || '';
 let pendingScore = null;
-
 let comboCount = 0, comboTimer = 0, comboMultiplier = 1;
+let isOverdrive = false;
+let overdriveTimer = 0;
+let overdriveCharged = true;
 let weatherParticles = [], weatherSpawnTimer = 0;
 
 let skill_f_dmg = localStorage.getItem('skill_f_dmg')==='true';
@@ -171,7 +927,6 @@ const skinList=[
   {id:'ptero', icon:'🦇', name:'Птеродактиль', price:200, hp:1, jumpMul:1.35, desc:'Прыжок x1.35'}
 ];
 
-// БОСС
 let isBossActive=false;
 let bossHP=0, maxBossHP=3;
 let bossTime=0, bossShootTimer=0;
@@ -179,11 +934,9 @@ let bossElement=null;
 let bX = 0, bY = 0;
 let nextBossScore=300;
 
-// ПИТОМЦЫ
 let petX=100, petY=100, dogX=50, dogY=0;
 let droneShootTimer=0;
 
-// ФИЗИКА И HP
 let currentHP=1, maxHP=1;
 let invincibleUntil=0;
 let yPosition=0, yVelocity=0, isGrounded=true;
@@ -191,16 +944,15 @@ let jumpCount=0;
 let spawnObstacleTimer=0, spawnCoinTimer=0, spawnPowerupTimer=0;
 let nextEventTime=0, currentEvent=null, lastEventType=null;
 
-// МАССИВЫ СУЩНОСТЕЙ
 let obstacleEntities = [];
 let coinEntities = [];
 let powerupsOnScreen = [];
-let meteorEntities = [];
 let bossProjectileEntities = [];
 let droneProjectileEntities = [];
 
-// ХИТБОКС ИГРОКА
-const HITBOX_X = 65; // Центр игрока
+let coinCap = 5;
+
+const HITBOX_X = 65; 
 const HITBOX_W = 50;
 const HITBOX_H = 50;
 
@@ -216,7 +968,6 @@ highScoreDisplay.textContent=`HI ${String(highScore).padStart(5,'0')}`;
 coinsDisplay.textContent=`🪙 ${coins}`;
 dnaDisplay.textContent=`🧬 ${dna}`;
 
-// --- КОЛЛИЗИЯ ---
 function checkAABB(x1, y1, w1, h1, x2, y2, w2, h2) {
   const pad = window.innerWidth < 900 ? 3 : 6; 
   return !(x1 + pad > x2 + w2 - pad || x1 + w1 - pad < x2 + pad || y1 + pad > y2 + h2 - pad || y1 + h1 - pad < y2 + pad);
@@ -226,28 +977,45 @@ function clearEntities() {
   obstacleEntities.forEach(e => e.el.remove()); obstacleEntities = [];
   coinEntities.forEach(e => e.el.remove()); coinEntities = [];
   powerupsOnScreen.forEach(e => e.el.remove()); powerupsOnScreen = [];
-  meteorEntities.forEach(e => e.el.remove()); meteorEntities = [];
   bossProjectileEntities.forEach(e => e.el.remove()); bossProjectileEntities = [];
   droneProjectileEntities.forEach(e => e.el.remove()); droneProjectileEntities = [];
+  if (altarEntity) { altarEntity.el.remove(); altarEntity = null; }
 }
 
-// --- УВЕДОМЛЕНИЯ ---
 function showToast(msg, isBoss=false){
   const t=document.createElement('div');
   t.innerHTML=msg;
-  t.style.cssText=`position:absolute;top:20%;left:50%;transform:translate(-50%,0);background:rgba(10,10,20,0.95);border:2px solid ${isBoss?'#ff00ff':'#ffd700'};border-radius:10px;padding:15px 25px;color:${isBoss?'#ff00ff':'#ffd700'};font-family:'Share Tech Mono';font-size:16px;font-weight:bold;text-align:center;z-index:1000;box-shadow:0 0 30px ${isBoss?'rgba(255,0,255,0.5)':'rgba(255,215,0,0.5)'};transition:opacity 0.5s,transform 0.5s;pointer-events:none;white-space:pre-wrap;`;
+  t.style.cssText=`position:absolute;top:20%;left:50%;transform:translate(-50%,0);background:rgba(10,10,20,0.95);border:2px solid ${isBoss?'#00ffff':'#ffd700'};border-radius:10px;padding:15px 25px;color:${isBoss?'#00ffff':'#ffd700'};font-family:'Share Tech Mono';font-size:16px;font-weight:bold;text-align:center;z-index:1000;box-shadow:0 0 30px ${isBoss?'rgba(0,255,255,0.5)':'rgba(255,215,0,0.5)'};transition:opacity 0.5s,transform 0.5s;pointer-events:none;white-space:pre-wrap;`;
   gameContainer.appendChild(t);
   setTimeout(()=>{t.style.opacity='0';t.style.transform='translate(-50%,-20px)';}, 2000);
   setTimeout(()=>t.remove(), 2500);
 }
 
-// --- БЭКЕНД ---
 async function loadLeaderboard(){
   try{
-    const r=await fetch(`${API_BASE}/api/leaderboard`); const d=await r.json();
-    leaderboardList.innerHTML=d.length?'':'Пока никто не играл';
-    d.slice(0,5).forEach((e,i)=>{ const row=document.createElement('div'); row.style.cssText='margin:3px 0;'; row.innerHTML=`${i+1}. <span style="color:#fff">${e.name}</span> — <span style="color:#00ff88;font-weight:bold">${e.score}</span>`; leaderboardList.appendChild(row); });
-  } catch { leaderboardList.innerHTML='<span style="color:#ff2a2a">Сервер недоступен ❌</span>'; }
+    const r=await fetch(`${API_BASE}/api/leaderboard`);
+    const d=await r.json();
+    leaderboardList.innerHTML='';
+    if (!Array.isArray(d) || !d.length) {
+      leaderboardList.textContent = 'Пока никто не играл';
+      return;
+    }
+    d.slice(0,5).forEach((e,i)=>{
+      const row = document.createElement('div');
+      row.style.cssText='margin:3px 0;';
+      const num = document.createTextNode(`${i+1}. `);
+      const nameSpan = document.createElement('span');
+      nameSpan.style.color = '#fff';
+      nameSpan.textContent = e.name;
+      const scoreSpan = document.createElement('span');
+      scoreSpan.style.cssText='color:#00ff88;font-weight:bold';
+      scoreSpan.textContent = e.score;
+      row.append(num, nameSpan, document.createTextNode(' — '), scoreSpan);
+      leaderboardList.appendChild(row);
+    });
+  } catch {
+    leaderboardList.innerHTML='<span style="color:#ff2a2a">Сервер недоступен ❌</span>';
+  }
 }
 async function sendScore(name, sc){
   try{ await fetch(`${API_BASE}/api/score`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,score:sc})}); loadLeaderboard(); }catch(e){console.error(e);}
@@ -284,7 +1052,6 @@ async function claimDailyReward(){
   } catch(e) { showToast('❌ Сервер недоступен'); }
 }
 
-// --- ИМЯ ИГРОКА ---
 function updateNameUI(){
   if (playerName) { playerNameInput.style.display = 'none'; saveRecordBtn.style.display = 'none'; }
   else {
@@ -298,12 +1065,12 @@ saveRecordBtn.onclick = () => {
   if (!v) { showToast('⚠️ Введите имя!'); return; }
   playerName = v; localStorage.setItem('dino_player_name', playerName);
   playerNameInput.value = ''; playerNameInput.style.display = 'none'; saveRecordBtn.style.display = 'none';
-  playSFX('buy'); showToast(`✅ Имя сохранено: ${playerName}`);
+  playSFX('buy'); showToast(`✅ Имя сохранено: ${escapeHTML(playerName)}`);
   if (pendingScore !== null) { sendScore(playerName, pendingScore); pendingScore = null; }
   loadProfileFromServer();
+  loadWorldBoss();
 };
 
-// --- КЛАССЫ ---
 function getClassStats(){
   const c = skinList.find(s=>s.id===selectedSkin) || skinList[0];
   let hp = c.hp; if (skill_f_hp) hp += 1;
@@ -333,7 +1100,6 @@ function renderSkins(){
   });
 }
 
-// --- ДЕРЕВО НАВЫКОВ ---
 const skillDefs = { f_dmg: { cost:30, name:'Урон x2' }, f_hp: { cost:50, name:'+1 жизнь' }, a_jump: { cost:30, name:'Прыжок+' }, a_magnet: { cost:50, name:'Магнит+' }, l_coin: { cost:30, name:'Монеты x2' }, l_event: { cost:50, name:'Удача' } };
 function renderSkills(){
   document.querySelectorAll('.skill-btn').forEach(btn=>{
@@ -354,7 +1120,6 @@ document.querySelectorAll('.skill-btn').forEach(btn=>{
 });
 skillBtn.onclick = ()=>{ playSFX('click'); renderSkills(); skillModal.style.display='block'; };
 
-// --- МАГАЗИН ---
 function updateShopUI(){
   coinsDisplay.textContent=`🪙 ${coins}`; dnaDisplay.textContent=`🧬 ${dna}`;
   [['glasses',buyGlassesBtn,15,activeGlasses,hasGlasses],['shoes',buyShoesBtn,30,activeShoes,hasShoes],['magnet',buyMagnetBtn,50,activeMagnet,hasMagnet],['pet',buyPetBtn,200,activePet,hasPet],['dog',buyDogBtn,300,activeDog,hasDog]].forEach(([id,btn,price,active,owned])=>{
@@ -366,72 +1131,103 @@ function updateShopUI(){
 }
 function setupShopBtn(btn, key, price){
   btn.onclick = ()=>{
-    let has = localStorage.getItem('dino_'+key)==='true'; let active = has && localStorage.getItem('dino_'+key+'_active')!=='false';
-    if (!has){ if (coins>=price){ coins-=price; localStorage.setItem('dino_coins',coins); localStorage.setItem('dino_'+key,'true'); localStorage.setItem('dino_'+key+'_active','true'); playSFX('buy'); saveProfileToServer(); } }
-    else { active=!active; localStorage.setItem('dino_'+key+'_active',active); playSFX('click'); }
-    if(key==='glasses'){hasGlasses=has||true;activeGlasses=active;} if(key==='shoes'){hasShoes=has||true;activeShoes=active;}
-    if(key==='magnet'){hasMagnet=has||true;activeMagnet=active;} if(key==='pet'){hasPet=has||true;activePet=active;} if(key==='dog'){hasDog=has||true;activeDog=active;}
+    let has = localStorage.getItem('dino_'+key)==='true';
+    let active = has && localStorage.getItem('dino_'+key+'_active')!=='false';
+    if (!has) {
+      if (coins >= price) {
+        coins -= price;
+        localStorage.setItem('dino_coins', coins);
+        localStorage.setItem('dino_'+key, 'true');
+        localStorage.setItem('dino_'+key+'_active', 'true');
+        playSFX('buy'); saveProfileToServer();
+        has = true; active = true;
+      } else {
+        showToast('⚠️ Не хватает монет');
+        return;
+      }
+    } else {
+      active = !active;
+      localStorage.setItem('dino_'+key+'_active', active);
+      playSFX('click');
+    }
+    if(key==='glasses'){ hasGlasses=has; activeGlasses=active; }
+    if(key==='shoes'){ hasShoes=has; activeShoes=active; }
+    if(key==='magnet'){ hasMagnet=has; activeMagnet=active; }
+    if(key==='pet'){ hasPet=has; activePet=active; }
+    if(key==='dog'){ hasDog=has; activeDog=active; }
     updateShopUI();
   };
 }
 setupShopBtn(buyGlassesBtn,'glasses',15); setupShopBtn(buyShoesBtn,'shoes',30); setupShopBtn(buyMagnetBtn,'magnet',50); setupShopBtn(buyPetBtn,'pet',200); setupShopBtn(buyDogBtn,'dog',300);
-closeBtns.forEach(b=>b.onclick=()=>{ playSFX('click'); skillModal.style.display='none'; skinsModal.style.display='none'; });
-skinsBtn.onclick=()=>{ playSFX('click'); renderSkins(); skinsModal.style.display='block'; };
-dailyChallengeBtn.onclick=()=>{ playSFX('click'); claimDailyReward(); };
 
-// --- СОБАЧКА ---
+// ИСПРАВЛЕНО: Общий обработчик закрытия модалок
+// Он добавлен в конец всех специфичных обработчиков, чтобы не перезаписывать их
+// и закрывает сразу все модалки (включая новые)
+closeBtns.forEach(b=>b.onclick=()=>{ 
+  playSFX('click'); 
+  skillModal.style.display='none'; 
+  skinsModal.style.display='none'; 
+  trailModal.style.display='none'; 
+  exchangeModal.style.display='none'; 
+  petsModal.style.display='none'; 
+  worldBossModal.style.display='none'; 
+  if (!isRouletteSpinning) rouletteModal.style.display='none'; 
+});
+
+skinsBtn.onclick=()=>{ playSFX('click'); renderSkins(); skinsModal.style.display='block'; };
+
+dailyChallengeBtn.onclick = () => {
+  playSFX('click');
+  if (!playerName) { showToast('⚠️ Сначала сохраните имя в меню'); return; }
+  claimDailyReward();
+  startGame(true);
+};
+
 function updateDog(){
   if (!activeDog) return;
   petDog.style.display = 'block';
   dogX += (100 - dogX) * 0.05; dogY += (10 - dogY) * 0.1;
   petDog.style.left = dogX + 'px'; petDog.style.bottom = dogY + 'px';
-  
+  const pickupSize = dogLevel >= 4 ? 70 : (dogLevel >= 2 ? 50 : 30);
   for (let i = coinEntities.length - 1; i >= 0; i--) {
     let c = coinEntities[i];
-    if (checkAABB(dogX, dogY, 30, 30, c.x, c.y, c.w, c.h)) {
+    if (checkAABB(dogX, dogY, pickupSize, pickupSize, c.x, c.y, c.w, c.h)) {
       c.el.remove(); coinEntities.splice(i, 1);
       playSFX('coin'); addCombo();
-      let reward = Math.round((activeGlasses?2:1) * (skill_l_coin?2:1) * comboMultiplier);
+      let reward = Math.round((activeGlasses?2:1) * (skill_l_coin?2:1) * comboMultiplier * (playerArtifacts.includes('black_hole')?2:1) * (1 + (loopCount-1) * 0.25));
       coins += reward; coinsDisplay.textContent = `🪙 ${coins}`;
       const q = quests.find(x=>x.id==='coin'); if(q&&!q.done){q.current++; updateQuestProgress('coin'); checkQuestComplete('coin');}
     }
   }
 }
 
-// --- СОБЫТИЯ ---
 function triggerRandomEvent(){
   if (currentEvent) return;
-  const rand = Math.random();
-  let type = rand > 0.7 ? 'goldrush' : (rand > 0.4 ? 'frenzy' : 'meteor');
-  if (type === lastEventType) { const other = ['meteor', 'goldrush', 'frenzy'].filter(e => e !== type); type = other[Math.floor(Math.random() * other.length)]; }
+  const events = ['goldrush', 'frenzy', 'rush'];
+  let availableEvents = events.filter(e => e !== lastEventType);
+  if (availableEvents.length === 0) availableEvents = events;
+  let type = availableEvents[Math.floor(Math.random() * availableEvents.length)];
   lastEventType = type; currentEvent = type;
-  
-  if (type==='meteor'){
-    eventBanner.textContent = '☄️ МЕТЕОРИТНЫЙ ДОЖДЬ!'; eventBanner.style.color = '#ff8c00'; eventBanner.style.display = 'block';
-    let meteorCount = 0;
-    const meteorInterval = setInterval(() => {
-      if (!isGameRunning || meteorCount >= 15) { clearInterval(meteorInterval); return; }
-      let m = document.createElement('div'); m.className = 'meteor';
-      let mx = Math.random()*(gameContainer.offsetWidth-30); let my = gameContainer.offsetHeight;
-      m.style.width='25px'; m.style.height='25px'; m.style.left = mx+'px'; m.style.bottom = my+'px';
-      obstaclesContainer.appendChild(m);
-      meteorEntities.push({ el: m, x: mx, y: my, w: 25, h: 25 });
-      meteorCount++;
-    }, 200);
-    setTimeout(()=>{ currentEvent=null; eventBanner.style.display='none'; nextEventTime = Date.now() + (skill_l_event ? 30000 : 60000); }, 5000);
-  } else if (type==='goldrush'){
+  if (type === 'goldrush'){
     eventBanner.textContent = '🪙 ЗОЛОТАЯ ЛИХОРАДКА!'; eventBanner.style.color = '#ffd700'; eventBanner.style.display = 'block';
+    const oldCap = coinCap;
+    coinCap = 20;
     for(let i=0;i<15;i++){ setTimeout(()=>{ if (!isGameRunning) return; spawnCoin(); }, i*150); }
-    setTimeout(()=>{ currentEvent=null; eventBanner.style.display='none'; nextEventTime = Date.now() + (skill_l_event ? 30000 : 60000); }, 4000);
-  } else {
+    setTimeout(()=>{ currentEvent=null; eventBanner.style.display='none'; coinCap = oldCap; nextEventTime = Date.now() + (skill_l_event ? 40000 : 80000); }, 4000);
+  } else if (type === 'frenzy'){
     eventBanner.textContent = '⚡ БЕЗУМНАЯ СКОРОСТЬ!'; eventBanner.style.color = '#ff00ff'; eventBanner.style.display = 'block';
-    setTimeout(()=>{ currentEvent=null; eventBanner.style.display='none'; nextEventTime = Date.now() + (skill_l_event ? 30000 : 60000); }, 5000);
+    setTimeout(()=>{ currentEvent=null; eventBanner.style.display='none'; nextEventTime = Date.now() + (skill_l_event ? 40000 : 80000); }, 5000);
+  } else {
+    eventBanner.textContent = '🌵 КАКТУСОВЫЙ БУМ!'; eventBanner.style.color = '#00ff88'; eventBanner.style.display = 'block';
+    for(let i=0; i<5; i++) setTimeout(() => { if (!isGameRunning) return; spawnRushObstacle(); }, i * 1000);
+    setTimeout(()=>{ currentEvent=null; eventBanner.style.display='none'; nextEventTime = Date.now() + (skill_l_event ? 40000 : 80000); }, 5000);
   }
 }
 
-// --- HP / УРОН ---
 function takeDamage(){
   if (Date.now() < invincibleUntil) return;
+  if (isGodMode) { showToast('👻 БЕССМЕРТИЕ'); invincibleUntil = Date.now() + 500; return; }
+  if (playerArtifacts.includes('chrono')) { timeWarpTimer = Date.now() + 2000; showToast('⚡ ВРЕМЯ ЗАМЕДЛЕНО!'); }
   if (hasShield){ hasShield=false; removeBuffIcon('shield'); playSFX('death'); gameContainer.classList.add('shake'); setTimeout(()=>gameContainer.classList.remove('shake'),300); invincibleUntil = Date.now()+1000; return; }
   currentHP--;
   if (livesDisplay) livesDisplay.innerHTML = '❤️'.repeat(Math.max(0, currentHP));
@@ -439,15 +1235,14 @@ function takeDamage(){
   invincibleUntil = Date.now()+1500; playSFX('death'); gameContainer.classList.add('shake'); setTimeout(()=>gameContainer.classList.remove('shake'),300);
 }
 
-// --- БАФФЫ ---
 function addBuffIcon(type){
+  if (activeBuffsUI.querySelector(`[data-buff-type="${type}"]`)) return;
   const el = document.createElement('div'); el.className = 'buff-icon'; el.dataset.buffType = type;
   el.textContent = type === 'shield' ? '🛡️' : '⚡'; el.style.color = type === 'shield' ? '#00ffff' : '#ff00ff';
   activeBuffsUI.appendChild(el);
 }
 function removeBuffIcon(type){ const el = activeBuffsUI.querySelector(`[data-buff-type="${type}"]`); if (el) el.remove(); }
 
-// --- ПАУЭРАПЫ ---
 function spawnPowerup(){
   if (powerupsOnScreen.length >= 2) return;
   const type = Math.random() < 0.5 ? 'shield' : 'megajump';
@@ -458,7 +1253,6 @@ function spawnPowerup(){
   powerupsOnScreen.push({ el: p, x: px, y: py, w: 34, h: 34, type: type });
 }
 
-// --- ПОГОДА ---
 const weatherTypeByBiome = ['sand', 'leaf', 'snow', 'spark', 'matrix'];
 function spawnWeatherParticle(){
   const type = weatherTypeByBiome[currentBiomeTier] || 'snow';
@@ -490,18 +1284,23 @@ function updateWeather(){
   }
 }
 
-// --- КОМБО ---
 function addCombo(){
   comboCount++; comboTimer = Date.now() + 2500;
   comboMultiplier = 1 + Math.floor(comboCount / 5) * 0.5;
+  if (comboMultiplier >= 3.0 && !isOverdrive && overdriveCharged) {
+    isOverdrive = true; overdriveCharged = false;
+    overdriveTimer = Date.now() + 5000; 
+    gameContainer.classList.add('overdrive');
+    invincibleUntil = Date.now() + 5000; 
+    showToast('🔥 ОВЕРДРАЙВ АКТИВИРОВАН!', true);
+  }
   if (comboCount >= 3) {
     comboDisplay.style.display = 'block'; comboDisplay.textContent = `COMBO x${comboMultiplier.toFixed(1)}!`;
     comboDisplay.style.animation = 'none'; void comboDisplay.offsetWidth; comboDisplay.style.animation = 'pop 0.3s ease-out';
   }
 }
-function resetCombo(){ comboCount = 0; comboMultiplier = 1; comboDisplay.style.display = 'none'; }
+function resetCombo(){ comboCount = 0; comboMultiplier = 1; comboDisplay.style.display = 'none'; overdriveCharged = true; }
 
-// --- БОСС ---
 function killBoss(){
   if (!bossElement) return;
   bossElement.remove(); bossElement=null;
@@ -510,78 +1309,76 @@ function killBoss(){
   bossHpContainer.style.display='none'; isBossActive=false;
   const bq = quests.find(q=>q.id==='boss'); if(bq){bq.current++; updateQuestProgress('boss'); checkQuestComplete('boss');}
   invincibleUntil = Date.now() + 2000;
+  const bossCoinBonus = 30 * loopCount;
+  coins += bossCoinBonus;
+  coinsDisplay.textContent = `🪙 ${coins}`;
+  localStorage.setItem('dino_coins', coins);
+  if (currentHP <= 0) return;
   currentBiomeTier++; 
-  if (currentBiomeTier > 4) showStory(5); else showStory(currentBiomeTier);
+  if (currentBiomeTier > 4) {
+    loopCount++;
+    const loopBonusCoins = 200 * (loopCount - 1);
+    const loopBonusDNA = 50 * (loopCount - 1);
+    coins += loopBonusCoins; dna += loopBonusDNA;
+    coinsDisplay.textContent = `🪙 ${coins}`; dnaDisplay.textContent = `🧬 ${dna}`;
+    localStorage.setItem('dino_coins', coins); localStorage.setItem('dino_dna', dna);
+    showToast(`🎉 ПЕТЛЯ ПРОЙДЕНА!\n+${loopBonusCoins} 🪙 · +${loopBonusDNA} 🧬`, true);
+    updateLoopBadge();
+    pendingLoopTransition = true;
+    showArtifactSelection();
+  } else {
+    pendingStoryTier = currentBiomeTier;
+    showArtifactSelection();
+  }
 }
 
 function spawnBoss(){
   isBossActive=true; 
-  // СНИЖЕНО HP ВТОРОГО БОССА ДО 3 (для джунглей)
   const hpList=[3, 3, 5, 7, 9]; 
-  maxBossHP = hpList[currentBiomeTier]||9; bossHP=maxBossHP;
+  let baseHP = hpList[currentBiomeTier] || 9; 
+  let scaledHP = Math.ceil(baseHP * (1 + (loopCount-1) * 0.5));
+  maxBossHP = hasGlassCannon ? Math.ceil(scaledHP / 3) : scaledHP;
+  bossHP=maxBossHP;
   bossHpFill.style.width='100%'; bossHpContainer.style.display='block';
-  obstaclesContainer.innerHTML=''; bossTime=0; bossShootTimer=0;
+  if (altarEntity) { altarEntity.el.remove(); altarEntity = null; }
+  obstacleEntities.forEach(e => e.el.remove());
+  obstacleEntities = [];
+  obstaclesContainer.innerHTML='';
+  bossTime=0; bossShootTimer=0;
   bossElement=document.createElement('div'); bossElement.className='boss'; bossElement.style.left='100%';
-  bossContainer.appendChild(bossElement); bossName.textContent=`БОСС БИОМА ${currentBiomeTier+1}`;
+  bossContainer.appendChild(bossElement); bossName.textContent=`БОСС БИОМА ${currentBiomeTier+1}${loopCount > 1 ? ' · ♾️ x' + loopCount : ''}`;
 }
 
-function updateBoss(){
+function updateBoss(timeScale = 1){
   if (!bossElement) return;
-  bossTime += 0.015 + currentBiomeTier*0.005;
+  bossTime += (0.015 + currentBiomeTier*0.005) * timeScale;
   const cx = (gameContainer.offsetWidth/2)-45; const amp = (gameContainer.offsetWidth/2)-100;
   bX = cx + Math.sin(bossTime)*amp; bY = 40 + Math.sin(bossTime)*10;
   bossElement.style.left = bX+'px'; bossElement.style.bottom = bY+'px';
-  
-  bossShootTimer++;
-  // УВЕЛИЧЕНА ПАУЗА ДЛЯ 2-ГО БОССА (ДЖУНГЛИ)
+  bossShootTimer += timeScale;
   let si = Math.max(40, 80-currentBiomeTier*10);
   if (currentBiomeTier === 1) si = 110; 
-  
   const maxP = 2+currentBiomeTier;
-  
   if (bossShootTimer>si && bossProjectileEntities.length<maxP){
     bossElement.classList.add('shooting'); setTimeout(()=>{ if(bossElement) bossElement.classList.remove('shooting'); }, 150);
     const tx = 90, ty = yPosition + 35; 
     const sp = 3 + currentBiomeTier*0.5;
-    
     const fireProjectile = (sx, sy, vx, vy) => {
       const p=document.createElement('div'); p.className='boss-projectile';
+      let width = 20, height = 20;
+      if (currentBiomeTier === 3) { width = 30; height = 30; p.style.width = width+'px'; p.style.height = height+'px'; p.style.borderRadius = '5px'; p.style.backgroundColor = '#ff8c00'; p.style.boxShadow = '0 0 20px #ff8c00'; }
       p.style.left=sx+'px'; p.style.bottom=sy+'px'; bossContainer.appendChild(p);
-      bossProjectileEntities.push({el:p,vx,vy,x:sx,y:sy,w:20,h:20});
+      bossProjectileEntities.push({el:p,vx,vy,x:sx,y:sy,w:width,h:height});
     };
-    
-    if (currentBiomeTier === 0) { 
-      const sx=bX+45, sy=bY+45; const dx=tx-sx, dy=ty-sy; const d=Math.sqrt(dx*dx+dy*dy)||1; 
-      fireProjectile(sx, sy, (dx/d)*sp, (dy/d)*sp); 
-    } 
-    else if (currentBiomeTier === 1) { 
-      // ВТОРОЙ БОСС (ДЖУНГЛИ): 3 пули, но летят в 2 РАЗА МЕДЛЕННЕЕ (1.8 вместо 3.5)
-      const sx=bX+45, sy=bY+45; 
-      const dx=tx-sx, dy=ty-sy; const d=Math.sqrt(dx*dx+dy*dy)||1; 
-      const angle = Math.atan2(dy, dx);
-      const jungleSp = 1.8; // Медленные пули
-      fireProjectile(sx, sy, Math.cos(angle)*jungleSp, Math.sin(angle)*jungleSp);
-      fireProjectile(sx, sy, Math.cos(angle-0.4)*jungleSp, Math.sin(angle-0.4)*jungleSp);
-      fireProjectile(sx, sy, Math.cos(angle+0.4)*jungleSp, Math.sin(angle+0.4)*jungleSp);
-    }
-    else if (currentBiomeTier === 2) { 
-      const sx=bX, sy=bY+20; 
-      fireProjectile(sx, sy, -6, 0); 
-    }
-    else if (currentBiomeTier === 3) { 
-      fireProjectile(tx, gameContainer.offsetHeight, 0, -4); 
-    }
-    else { 
-      const sx=bX+45, sy=bY+45; const dx=tx-sx, dy=ty-sy; const d=Math.sqrt(dx*dx+dy*dy)||1; const angle = Math.atan2(dy, dx); 
-      fireProjectile(sx, sy, Math.cos(angle)*sp, Math.sin(angle)*sp); 
-      fireProjectile(sx, sy, Math.cos(angle-0.3)*sp, Math.sin(angle-0.3)*sp); 
-      fireProjectile(sx, sy, Math.cos(angle+0.3)*sp, Math.sin(angle+0.3)*sp); 
-    }
+    if (currentBiomeTier === 0) { const sx=bX+45, sy=bY+45; const dx=tx-sx, dy=ty-sy; const d=Math.sqrt(dx*dx+dy*dy)||1; fireProjectile(sx, sy, (dx/d)*sp, (dy/d)*sp); } 
+    else if (currentBiomeTier === 1) { const sx=bX+45, sy=bY+45; const dx=tx-sx, dy=ty-sy; const d=Math.sqrt(dx*dx+dy*dy)||1; const angle = Math.atan2(dy, dx); const jungleSp = 1.8; fireProjectile(sx, sy, Math.cos(angle)*jungleSp, Math.sin(angle)*jungleSp); fireProjectile(sx, sy, Math.cos(angle-0.4)*jungleSp, Math.sin(angle-0.4)*jungleSp); fireProjectile(sx, sy, Math.cos(angle+0.4)*jungleSp, Math.sin(angle+0.4)*jungleSp); }
+    else if (currentBiomeTier === 2) { const sx=bX, sy=bY+20; fireProjectile(sx, sy, -6, 0); }
+    else if (currentBiomeTier === 3) { fireProjectile(bX, 0, -7, 0); }
+    else { const sx=bX+45, sy=bY+45; const dx=tx-sx, dy=ty-sy; const d=Math.sqrt(dx*dx+dy*dy)||1; const angle = Math.atan2(dy, dx); fireProjectile(sx, sy, Math.cos(angle)*sp, Math.sin(angle)*sp); fireProjectile(sx, sy, Math.cos(angle-0.3)*sp, Math.sin(angle-0.3)*sp); fireProjectile(sx, sy, Math.cos(angle+0.3)*sp, Math.sin(angle+0.3)*sp); }
     bossShootTimer=0;
   }
-  
   for (let i=bossProjectileEntities.length-1;i>=0;i--){
-    const p=bossProjectileEntities[i]; p.x+=p.vx; p.y+=p.vy;
+    const p=bossProjectileEntities[i]; p.x+=p.vx*timeScale; p.y+=p.vy*timeScale;
     p.el.style.left=p.x+'px'; p.el.style.bottom=p.y+'px';
     if (checkAABB(HITBOX_X, yPosition + 10, HITBOX_W, HITBOX_H, p.x, p.y, p.w, p.h)){
       p.el.remove(); bossProjectileEntities.splice(i,1); takeDamage();
@@ -589,141 +1386,249 @@ function updateBoss(){
     }
     if (p.y<-50||p.x<-50||p.x>gameContainer.offsetWidth+50){ p.el.remove(); bossProjectileEntities.splice(i,1); }
   }
-  
   if (activePet){
     petDrone.style.display='block';
     const tx=80, ty=yPosition+80; petX += (tx-petX)*0.1; petY += (ty-petY)*0.1;
     petDrone.style.left=petX+'px'; petDrone.style.bottom=petY+'px';
-    droneShootTimer++;
-    if (droneShootTimer>120){
-      const bcx=bX+45; const bcy=bY+45;
-      const pr2=document.createElement('div'); pr2.className='drone-projectile'; pr2.style.left=petX+'px'; pr2.style.bottom=petY+'px'; bossContainer.appendChild(pr2);
-      const dx=bcx-petX, dy=bcy-petY; const d=Math.sqrt(dx*dx+dy*dy)||1;
-      droneProjectileEntities.push({el:pr2,vx:(dx/d)*5,vy:(dy/d)*5,x:petX,y:petY,w:12,h:12});
-      droneShootTimer=0;
+    droneShootTimer += timeScale;
+    const shootInterval = droneLevel >= 2 ? 84 : 120;
+    if (droneShootTimer > shootInterval) {
+      const bcx = bX + 45; const bcy = bY + 45;
+      const dx = bcx - petX, dy = bcy - petY;
+      const d = Math.sqrt(dx*dx + dy*dy) || 1;
+      const baseAngle = Math.atan2(dy, dx);
+      const offsets = droneLevel >= 3 ? [-0.2, 0, 0.2] : [0];
+      offsets.forEach(off => {
+        const rad = baseAngle + off;
+        const pr2 = document.createElement('div'); pr2.className = 'drone-projectile';
+        pr2.style.left = petX + 'px'; pr2.style.bottom = petY + 'px';
+        bossContainer.appendChild(pr2);
+        droneProjectileEntities.push({ el: pr2, vx: Math.cos(rad) * 5, vy: Math.sin(rad) * 5, x: petX, y: petY, w: 12, h: 12 });
+      });
+      droneShootTimer = 0;
     }
     for (let i=droneProjectileEntities.length-1;i>=0;i--){
-      const p=droneProjectileEntities[i]; p.x+=p.vx; p.y+=p.vy;
+      const p=droneProjectileEntities[i];
+      p.x+=p.vx*timeScale; p.y+=p.vy*timeScale;
       p.el.style.left=p.x+'px'; p.el.style.bottom=p.y+'px';
       if (checkAABB(bX, bY, 90, 90, p.x, p.y, p.w, p.h)){
-        p.el.remove(); droneProjectileEntities.splice(i,1); bossHP -= 0.15;
+        p.el.remove(); droneProjectileEntities.splice(i,1);
+        const dmg = droneLevel >= 4 ? 0.225 : 0.15;
+        bossHP -= dmg;
         bossHpFill.style.width=(Math.max(0,bossHP)/maxBossHP*100)+'%'; playSFX('boss_hit');
         if (bossHP<=0){ killBoss(); return; }
       } else if (p.y<-50||p.x<-50||p.x>gameContainer.offsetWidth+50){ p.el.remove(); droneProjectileEntities.splice(i,1); }
     }
+    if (droneLevel >= 5) {
+      droneLaserTimer += timeScale;
+      if (droneLaserTimer > 120) {
+        droneLaserTimer = 0;
+        bossHP -= 0.45;
+        bossHpFill.style.width = (Math.max(0, bossHP) / maxBossHP * 100) + '%';
+        playSFX('boss_hit');
+        bossElement.style.filter = 'drop-shadow(0 0 60px #00ffff) drop-shadow(0 0 100px #00ffff) brightness(2)';
+        petDrone.style.filter = 'drop-shadow(0 0 30px #00ffff) brightness(2)';
+        setTimeout(() => { if (bossElement) bossElement.style.filter = ''; petDrone.style.filter = ''; }, 200);
+        if (bossHP <= 0) { killBoss(); return; }
+      }
+    }
   }
-  
   if (checkAABB(HITBOX_X, yPosition + 10, HITBOX_W, HITBOX_H, bX, bY, 90, 90)){
-    if (yVelocity<0 && (yPosition + 10 + HITBOX_H) < (bY + 45)){
-      bossHP--; bossHpFill.style.width=(Math.max(0,bossHP)/maxBossHP*100)+'%'; playSFX('boss_hit'); yVelocity=12;
-      if (bossHP<=0) { killBoss(); return; }
+    if (yVelocity < 0 && (yPosition + 10) > (bY + 40)){
+      bossHP--; bossHpFill.style.width=(Math.max(0,bossHP)/maxBossHP*100)+'%'; playSFX('boss_hit'); yVelocity = 12; invincibleUntil = Date.now() + 500; if (bossHP<=0) { killBoss(); return; }
     } else { takeDamage(); if (!isGameRunning) return; }
   }
 }
 
-// --- ИГРОВОЙ ЦИКЛ ---
 function gameLoop(){
   if (!isGameRunning) return;
-  
-  if (isBossActive){ updateBoss(); } 
+  let timeScale = 1;
+  if (Date.now() < timeWarpTimer) timeScale = 0.5; 
+  if (playerArtifacts.includes('vampire') && score > 0 && score % 10000 === 0 && currentHP < (hasGlassCannon ? 1 : 3)) {
+      if (!hasGlassCannon) {
+          currentHP++;
+          if (livesDisplay) { livesDisplay.innerHTML = '❤️'.repeat(currentHP); livesDisplay.style.display = 'flex'; }
+          showToast('🩸 ВАМПИРИЗМ: +1 ЖИЗНЬ!');
+      }
+  }
+  if (isBossActive){ updateBoss(timeScale); } 
   else {
     score++; const cs = Math.floor(score/10); scoreDisplay.textContent = String(cs).padStart(5,'0');
-    const sq = quests.find(q=>q.id==='score'); if (sq&&!sq.done){ sq.current=cs; if (cs>=sq.target) checkQuestComplete('score'); else updateQuestProgress('score'); }
     
+    // МИРОВОЙ БОСС: очки → урон
+    if (playerName && currentWorldBossState && !currentWorldBossState.killed) {
+      pendingWorldBossDamage += 1;
+      if (pendingWorldBossDamage >= 100 || (Date.now() - lastWorldBossFlush) > 5000) {
+        flushWorldBossDamage();
+      }
+    }
+    
+    const sq = quests.find(q=>q.id==='score'); if (sq&&!sq.done){ sq.current=cs; if (cs>=sq.target) checkQuestComplete('score'); else updateQuestProgress('score'); }
     if (cs>=nextBossScore){ spawnBoss(); } else {
-      const baseSpeed = window.innerWidth<900?3:4.5; let speed = isDailyMode? baseSpeed*1.5 : baseSpeed;
+      let speed = window.innerWidth<900?3:4.5; 
+      if (isDailyMode) speed *= 1.5;
       if (currentEvent==='frenzy') speed *= 1.4;
-      
+      if (playerArtifacts.includes('berserk')) speed *= 1.2; 
+      speed *= timeScale; 
+      speed *= (1 + (loopCount-1) * 0.15);
       spawnObstacleTimer++; if (spawnObstacleTimer>100){ spawnObstacle(); spawnObstacleTimer=0; }
-      spawnCoinTimer++; if (spawnCoinTimer>150){ spawnCoin(); spawnCoinTimer=0; }
+      spawnCoinTimer++; 
+      if (spawnCoinTimer > (150 + Math.random() * 150)) { spawnCoin(); spawnCoinTimer = 0; }
       spawnPowerupTimer++; if (spawnPowerupTimer>600){ spawnPowerup(); spawnPowerupTimer=0; }
-      
+      if (!altarEntity && !isBossActive) {
+          spawnAltarTimer++;
+          if (spawnAltarTimer > 1000) { spawnAltar(); spawnAltarTimer = 0; }
+      }
       if (Date.now() > nextEventTime && !currentEvent){
         if (Math.random() < (skill_l_event ? 0.9 : 0.5)) triggerRandomEvent();
-        else nextEventTime = Date.now() + 20000;
+        else nextEventTime = Date.now() + 30000;
+      }
+      
+      // Собачка Lv3 и Lv5
+      if (activeDog && dogLevel >= 3) {
+        dogBarkTimer += timeScale;
+        if (dogBarkTimer > 300) {
+          dogBarkTimer = 0;
+          for (let i = 0; i < obstacleEntities.length; i++) {
+            if (obstacleEntities[i].el.classList.contains('flying')) {
+              const ob = obstacleEntities[i]; ob.el.remove(); obstacleEntities.splice(i, 1);
+              petDog.style.filter = 'drop-shadow(0 0 20px #00ffff) brightness(2)';
+              setTimeout(() => { petDog.style.filter = 'drop-shadow(0 0 5px #8B4513)'; }, 300);
+              showToast('🐕 ГАВ! Птица отпугнута');
+              break;
+            }
+          }
+        }
+      }
+      if (activeDog && dogLevel >= 5) {
+        dogFireTimer += timeScale;
+        if (dogFireTimer > 180) {
+          dogFireTimer = 0;
+          for (let i = 0; i < obstacleEntities.length; i++) {
+            const ob = obstacleEntities[i];
+            if (ob.x > HITBOX_X + HITBOX_W && ob.x < HITBOX_X + 500 && !ob.el.classList.contains('flying')) {
+              const fire = document.createElement('div');
+              fire.className = 'trail-particle fire';
+              fire.style.left = ob.x + 'px'; fire.style.bottom = '20px';
+              trailContainer.appendChild(fire);
+              setTimeout(() => fire.remove(), 700);
+              ob.el.remove(); obstacleEntities.splice(i, 1);
+              petDog.style.filter = 'drop-shadow(0 0 20px #ff2a2a) brightness(2)';
+              setTimeout(() => { petDog.style.filter = 'drop-shadow(0 0 5px #8B4513)'; }, 300);
+              showToast('🔥 ЦЕРБЕР СЖЁГ ВРАГА');
+              break;
+            }
+          }
+        }
       }
       
       for (let i=obstacleEntities.length-1; i>=0; i--) {
         let o = obstacleEntities[i]; o.x -= speed; o.el.style.left = o.x + 'px';
-        if (checkAABB(HITBOX_X, yPosition + 10, HITBOX_W, HITBOX_H, o.x, o.y, o.w, o.h)) { takeDamage(); if(!isGameRunning) return; }
+        if (checkAABB(HITBOX_X, yPosition + 10, HITBOX_W, HITBOX_H, o.x, o.y, o.w, o.h)) { 
+            o.el.remove(); obstacleEntities.splice(i, 1); takeDamage(); 
+            if(!isGameRunning) return; continue; 
+        }
+        if (o.isElite && o.x < -150) {
+            for(let c=0; c<10; c++) { setTimeout(()=>spawnCoin(), c*50); }
+            showToast('💰 ЭЛИТНЫЙ ВРАГ ПРОЙДЕН!');
+        }
         if (o.x < -150) { o.el.remove(); obstacleEntities.splice(i, 1); }
       }
-      
+      if (altarEntity) {
+          altarEntity.x -= speed;
+          altarEntity.el.style.left = altarEntity.x + 'px';
+          if (checkAABB(HITBOX_X, yPosition + 10, HITBOX_W, HITBOX_H, altarEntity.x, altarEntity.y, altarEntity.w, altarEntity.h)) {
+              altarEntity.el.remove(); altarEntity = null; isGameRunning = false; altarModal.style.display = 'block';
+          } else if (altarEntity && altarEntity.x < -100) { altarEntity.el.remove(); altarEntity = null; }
+      }
       for (let i=coinEntities.length-1; i>=0; i--) {
         let c = coinEntities[i]; let cx = c.x - speed; let cy = c.y;
         if (activeMagnet){
           const dx = 90 - cx; const dy = (yPosition + 35) - cy;
-          const range = skill_a_magnet?600:300;
-          if (Math.sqrt(dx*dx+dy*dy)<range){ cx+=dx*0.15; cy+=dy*0.15; }
+          const range = (skill_a_magnet || playerArtifacts.includes('black_hole')) ? 800 : 300;
+          if (Math.sqrt(dx*dx+dy*dy)<range){ cx+=dx*0.08; cy+=dy*0.08; }
         }
         c.x = cx; c.y = cy; c.el.style.left = c.x + 'px'; c.el.style.bottom = c.y + 'px';
         if (checkAABB(HITBOX_X, yPosition + 10, HITBOX_W, HITBOX_H, c.x, c.y, c.w, c.h)) {
           c.el.remove(); coinEntities.splice(i, 1); playSFX('coin'); addCombo();
-          const r=Math.round((activeGlasses?2:1)*(skill_l_coin?2:1)*comboMultiplier); coins+=r; localStorage.setItem('dino_coins',coins); coinsDisplay.textContent=`🪙 ${coins}`;
+          let mult = comboMultiplier;
+          if (activeGlasses) mult *= 2;
+          if (skill_l_coin) mult *= 2;
+          if (playerArtifacts.includes('black_hole')) mult *= 2;
+          const r = Math.round(mult * (1 + (loopCount-1) * 0.25));
+          coins+=r; localStorage.setItem('dino_coins',coins); coinsDisplay.textContent=`🪙 ${coins}`;
           const q=quests.find(qq=>qq.id==='coin'); if(q&&!q.done){q.current++; updateQuestProgress('coin'); checkQuestComplete('coin');}
         } else if (c.x < -50) { c.el.remove(); coinEntities.splice(i, 1); }
       }
-      
       for (let i=powerupsOnScreen.length-1; i>=0; i--) {
         const p = powerupsOnScreen[i]; p.x -= speed; p.el.style.left = p.x + 'px';
         if (checkAABB(HITBOX_X, yPosition + 10, HITBOX_W, HITBOX_H, p.x, p.y, p.w, p.h)) {
-          if (p.type === 'shield') { hasShield = true; addBuffIcon('shield'); } else { hasDoubleJump = true; addBuffIcon('megajump'); }
+          if (p.type === 'shield') { hasShield = true; shieldTimer = Date.now() + 8000; addBuffIcon('shield'); }
+          else { hasDoubleJump = true; megaJumpTimer = Date.now() + 8000; addBuffIcon('megajump'); }
           playSFX('buy'); p.el.remove(); powerupsOnScreen.splice(i, 1);
         } else if (p.x < -50) { p.el.remove(); powerupsOnScreen.splice(i, 1); }
       }
     }
     if (cs>highScore){ highScore=cs; highScoreDisplay.textContent=`HI ${String(highScore).padStart(5,'0')}`; }
   }
-  
-  for (let i=meteorEntities.length-1; i>=0; i--) {
-    let m = meteorEntities[i]; m.y -= 5; m.el.style.bottom = m.y + 'px';
-    if (m.y < -50) { m.el.remove(); meteorEntities.splice(i,1); continue; }
-    if (checkAABB(HITBOX_X, yPosition + 10, HITBOX_W, HITBOX_H, m.x, m.y, m.w, m.h)) { m.el.remove(); meteorEntities.splice(i,1); takeDamage(); if (!isGameRunning) return; }
-  }
-  
+  if (hasShield && Date.now() > shieldTimer) { hasShield = false; removeBuffIcon('shield'); }
+  if (hasDoubleJump && Date.now() > megaJumpTimer) { hasDoubleJump = false; removeBuffIcon('megajump'); }
+  if (isOverdrive && Date.now() > overdriveTimer) { isOverdrive = false; gameContainer.classList.remove('overdrive'); }
   if (comboCount > 0 && Date.now() > comboTimer) resetCombo();
   updateDog(); updateWeather();
-  
+  trailSpawnTimer++;
+  if (trailSpawnTimer >= 3) { spawnTrailParticle(); trailSpawnTimer = 0; }
   if (!isBossActive && activePet){
     petDrone.style.display='block';
     const tx=80, ty=yPosition+80; petX += (tx-petX)*0.1; petY += (ty-petY)*0.1;
     petDrone.style.left=petX+'px'; petDrone.style.bottom=petY+'px';
   }
-  
   if (!isGrounded){
     yVelocity -= 0.5; yPosition += yVelocity;
     if (yPosition<=0){ yPosition=0; yVelocity=0; isGrounded=true; player.classList.add('running'); jumpCount=0; }
   }
   player.style.bottom = yPosition+'px';
-  
-  if (Date.now() < invincibleUntil) player.style.opacity = (Math.floor(Date.now()/100)%2)?'0.3':'1';
+  if (isGodMode) player.style.opacity = '1';
+  else if (Date.now() < invincibleUntil) player.style.opacity = (Math.floor(Date.now()/100)%2)?'0.3':'1';
   else player.style.opacity = '1';
-  
   animationFrameId = requestAnimationFrame(gameLoop);
 }
 
-// --- СПАВН ---
 function spawnObstacle(){
   if (gameContainer.offsetWidth===0) return;
   const o = document.createElement('div'); o.classList.add('obstacle');
   let w, h, flying = false;
+  let isElite = Math.random() < 0.03; 
+  if (isElite) o.classList.add('elite');
   if (Math.random()<0.2) { o.classList.add('flying'); w = 60; h = 45; flying = true; }
   else { h = (Math.floor(Math.random()*30)+50); w = Math.random()>0.6?55:35; o.style.height = h+'px'; o.style.width = w+'px'; }
   let ox = gameContainer.offsetWidth; let oy = flying ? 70 : 0;
   o.style.left = ox + 'px'; o.style.bottom = oy + 'px';
   obstaclesContainer.appendChild(o);
-  obstacleEntities.push({ el: o, x: ox, y: oy, w: w, h: h });
+  obstacleEntities.push({ el: o, x: ox, y: oy, w: w, h: h, isElite: isElite });
 }
+
+function spawnRushObstacle(){
+  if (gameContainer.offsetWidth===0) return;
+  const o = document.createElement('div'); o.classList.add('obstacle');
+  let h = (Math.floor(Math.random()*30)+50); 
+  let w = Math.random()>0.6?55:35; 
+  o.style.height = h+'px'; o.style.width = w+'px';
+  let ox = gameContainer.offsetWidth; 
+  o.style.left = ox + 'px'; o.style.bottom = '0px';
+  obstaclesContainer.appendChild(o);
+  obstacleEntities.push({ el: o, x: ox, y: 0, w: w, h: h, isElite: false });
+}
+
 function spawnCoin(){
-  if (coinEntities.length >= 5) return;
+  if (coinEntities.length >= coinCap) return;
   const c = document.createElement('div'); c.className = 'coin';
-  let cx = gameContainer.offsetWidth; let cy = (Math.floor(Math.random()*120)+50);
+  let cx = gameContainer.offsetWidth - 40; let cy = (Math.floor(Math.random()*120)+50);
   c.style.left = cx + 'px'; c.style.bottom = cy + 'px';
   coinsContainer.appendChild(c);
   coinEntities.push({ el: c, x: cx, y: cy, w: 24, h: 24 });
 }
 
-// --- КВЕСТЫ ---
 function renderQuests(){
   questListUI.innerHTML='';
   quests.forEach(q=>{ const d=document.createElement('div'); d.dataset.questId = q.id; d.className=`quest-item ${q.done?'done':''}`; d.innerHTML=`${q.done?'✅':'⏳'} ${q.text} (${Math.min(q.current,q.target)}/${q.target})`; questListUI.appendChild(d); });
@@ -742,45 +1647,87 @@ function checkQuestComplete(id){
   updateQuestProgress(id);
 }
 
-// --- СТАРТ ---
-function startGame(daily=false){
-  initAudio(); isDailyMode=daily; isGameRunning=true; isBossActive=false; bossHpContainer.style.display='none';
-  if(bossElement){bossElement.remove();bossElement=null;}
+function initRun(daily=false){
+  isDailyMode = daily;
+  isGameRunning = false;
+  isBossActive = false;
+  bossHpContainer.style.display='none';
+  if (bossElement){ bossElement.remove(); bossElement=null; }
   clearEntities();
-  gameMenu.style.display='none'; obstaclesContainer.innerHTML=''; bossContainer.innerHTML=''; coinsContainer.innerHTML=''; powerupsContainer.innerHTML='';
+  gameMenu.style.display='none';
+  obstaclesContainer.innerHTML=''; bossContainer.innerHTML=''; coinsContainer.innerHTML=''; powerupsContainer.innerHTML='';
   weatherParticles.forEach(p=>p.el.remove()); weatherParticles=[]; weatherSpawnTimer = 0;
+  trailSpawnTimer = 0;
+  dogBarkTimer = 0; dogFireTimer = 0; droneLaserTimer = 0;
+  pendingWorldBossDamage = 0;
+  lastWorldBossFlush = Date.now();
   
+  if (daily) {
+    const dateKey = new Date().toISOString().slice(0,10);
+    setDailySeed(hashCode(dateKey));
+  } else {
+    setDailySeed(null);
+  }
+  if (dailyBadge) dailyBadge.style.display = daily ? 'inline' : 'none';
+  loopCount = 1; pendingLoopTransition = false;
+  updateLoopBadge();
   const stats = getClassStats(); maxHP = stats.hp; currentHP = stats.hp;
-  livesDisplay.innerHTML = '❤️'.repeat(currentHP); livesDisplay.style.display = maxHP>1 ? 'flex':'none';
+  livesDisplay.innerHTML = '❤️'.repeat(currentHP); livesDisplay.style.display = (maxHP>1 || isGodMode) ? 'flex':'none';
   score=0; yPosition=0; yVelocity=0; isGrounded=true; jumpCount=0;
   spawnObstacleTimer=0; spawnCoinTimer=0; spawnPowerupTimer=0; droneShootTimer=0;
-  hasShield = false; hasDoubleJump = false; activeBuffsUI.innerHTML = ''; resetCombo();
+  coinCap = 5;
+  playerArtifacts = []; hasGlassCannon = false; timeWarpTimer = 0; activeArtifactsUI.innerHTML = ''; 
+  isOverdrive = false; overdriveCharged = true; gameContainer.classList.remove('overdrive');
+  altarEntity = null; spawnAltarTimer = 0;
+  hasShield = false; hasDoubleJump = false; 
+  shieldTimer = 0; megaJumpTimer = 0;
+  activeBuffsUI.innerHTML = ''; resetCombo();
   petDog.style.display = activeDog?'block':'none'; dogX=50; dogY=0;
-  currentEvent=null; eventBanner.style.display='none'; nextEventTime = Date.now() + 30000; lastEventType = null;
+  currentEvent=null; eventBanner.style.display='none'; nextEventTime = Date.now() + 60000; lastEventType = null;
   quests.forEach(q=>{q.current=0;q.done=false;}); renderQuests();
-  currentBiomeTier = daily?0:(parseInt(startBiomeSelect.value)||0); nextBossScore = (currentBiomeTier+1)*300;
-  gameContainer.className = `game-container biome-${['desert','jungle','ice','volcano','cyber'][currentBiomeTier]}`; playBiomeMusic(currentBiomeTier);
+  currentBiomeTier = daily?0:(parseInt(startBiomeSelect.value)||0);
+  nextBossScore = getLoopBaseScore() + (currentBiomeTier+1)*300;
+  gameContainer.className = `game-container biome-${['desert','jungle','ice','volcano','cyber'][currentBiomeTier]}`;
+  playBiomeMusic(currentBiomeTier);
   updatePlayerSkin(); player.classList.add('running');
+  updateGodModeUI();
   invincibleUntil = Date.now()+2000;
-  highScore = parseInt(localStorage.getItem(daily?'dino_daily_hs':'dino_highscore'))||0; highScoreDisplay.textContent=`HI ${String(highScore).padStart(5,'0')}`;
-  if (animationFrameId) cancelAnimationFrame(animationFrameId); gameLoop();
+  highScore = parseInt(localStorage.getItem(daily?'dino_daily_hs':'dino_highscore'))||0;
+  highScoreDisplay.textContent=`HI ${String(highScore).padStart(5,'0')}`;
+}
+
+function startGame(daily=false){
+  initAudio();
+  initRun(daily);
+  const startTier = parseInt(startBiomeSelect.value)||0;
+  const showIntro = !daily && !hasSeenIntro && startTier === 0;
+  if (showIntro) {
+    hasSeenIntro = true;
+    showStory(0);
+  } else {
+    isGameRunning = true;
+    gameLoop();
+  }
 }
 
 function endGame(){
   if (!isGameRunning) return;
   isGameRunning=false; cancelAnimationFrame(animationFrameId); bgMusic.pause(); playSFX('death');
+  setDailySeed(null);
   bossHpContainer.style.display='none';
   if(bossElement){bossElement.remove();bossElement=null;}
+  player.classList.remove('running');
   clearEntities();
+  trailContainer.innerHTML = '';
+  if (pendingWorldBossDamage > 0) flushWorldBossDamage();
   const cs = Math.floor(score/10); const dr = Math.floor(cs/50);
   dna += dr; localStorage.setItem('dino_dna', dna);
   if (cs>highScore){ highScore=cs; localStorage.setItem(isDailyMode?'dino_daily_hs':'dino_highscore', highScore); }
   if (playerName) { sendScore(playerName, cs); saveProfileToServer(); } else { pendingScore = cs; }
-  menuTitle.textContent='GAME OVER'; menuText.innerHTML=`Счёт: ${cs}<br>Получено ДНК: 🧬 +${dr}`; startBtn.textContent='ИГРАТЬ СНОВА';
+  menuTitle.textContent='GAME OVER'; menuText.innerHTML=`Счёт: ${cs}<br>Достигнута петля: ♾️ x${loopCount}<br>Получено ДНК: 🧬 +${dr}`; startBtn.textContent='ИГРАТЬ СНОВА';
   gameMenu.style.display='flex'; updateShopUI(); updatePlayerSkin(); updateNameUI();
 }
 
-// --- УПРАВЛЕНИЕ ---
 function doJump(){
   if (!isGameRunning) return;
   const stats = getClassStats(); const baseJump = activeShoes?14:12; const jumpForce = baseJump * stats.jumpMul;
@@ -800,6 +1747,6 @@ mobileJumpBtn.addEventListener('touchstart',(e)=>{e.preventDefault(); if(!isGame
 startBtn.onclick = ()=>startGame(false);
 window.addEventListener('keydown', handleKeyDown);
 
-// Init
-loadLeaderboard(); updateShopUI(); renderQuests(); updatePlayerSkin(); renderSkills(); updateNameUI();
+loadLeaderboard(); updateShopUI(); renderQuests(); updatePlayerSkin(); renderSkills(); updateNameUI(); updateGodModeUI();
+loadWorldBoss();
 if (playerName) loadProfileFromServer();

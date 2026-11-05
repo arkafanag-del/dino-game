@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Dino Ultimate RPG 6.3</title>
+    <title>Dino Ultimate RPG 8.4</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -20,6 +20,9 @@
         <div class="hud-left">
             <div id="coins-display">🪙 0</div>
             <div id="dna-display">🧬 0</div>
+            <div id="loop-badge" style="display:none;">♾️ x1</div>
+            <div id="god-badge" style="display:none;">👻</div>
+            <div id="daily-badge" style="display:none; color:#ffd700; font-size:10px;">🔥 DAILY</div>
             <button id="mute-btn" class="icon-btn">🔊</button>
         </div>
         <div class="score-board">
@@ -33,6 +36,7 @@
         <div class="bg-layer bg-far"></div>
         <div class="bg-layer bg-near"></div>
         <div class="ground-line"></div>
+        <div id="world-boss-bar"><div id="world-boss-fill"></div></div>
 
         <div id="lives-display" style="display:none;">❤️</div>
         <div id="event-banner" style="display:none;"></div>
@@ -44,6 +48,7 @@
 
         <div id="combo-display" style="display:none;">COMBO x2!</div>
         <div id="active-buffs"></div>
+        <div id="active-artifacts"></div>
         <div id="pet-drone" style="display:none;">🛸</div>
         <div id="pet-dog" style="display:none;">🐕</div>
 
@@ -53,6 +58,7 @@
         </div>
 
         <div id="clouds" style="z-index: 1; position: absolute; inset: 0; pointer-events: none;"></div>
+        <div id="trail-container" style="z-index: 9; position: absolute; inset: 0; pointer-events: none;"></div>
         <div id="obstacles" style="z-index: 5; position: absolute; inset: 0; pointer-events: none;"></div>
         <div id="coins-container" style="z-index: 6; position: absolute; inset: 0; pointer-events: none;"></div>
         <div id="powerups-container" style="z-index: 7; position: absolute; inset: 0; pointer-events: none;"></div>
@@ -62,13 +68,19 @@
         <div class="player" id="player-character"></div>
 
         <div id="game-menu">
-            <h1 id="menu-title">ДИНОЗАВРИК 6.3</h1>
+            <h1 id="menu-title">ДИНОЗАВРИК 8.4</h1>
             <p id="menu-text">Нажмите Пробел или кнопку, чтобы начать</p>
             
             <div class="menu-actions">
                 <button id="daily-challenge-btn" class="action-btn" style="border-color:#ffd700; color:#ffd700;">🔥 ДЕЙЛИ</button>
                 <button id="skill-btn" class="action-btn">🌳 НАВЫКИ</button>
                 <button id="skins-btn" class="action-btn">🦖 КЛАССЫ</button>
+                <button id="roulette-btn" class="action-btn" style="border-color:#ff00ff; color:#ff00ff;">🎰 РУЛЕТКА</button>
+                <button id="trail-btn" class="action-btn" style="border-color:#00ffff; color:#00ffff;">🎨 ШЛЕЙФ</button>
+                <button id="pets-btn" class="action-btn" style="border-color:#00ffff; color:#00ffff;">🐾 ПИТОМЦЫ</button>
+                <button id="exchange-btn" class="action-btn" style="border-color:#ffd700; color:#ffd700;">💱 БИРЖА</button>
+                <button id="world-boss-btn" class="action-btn" style="border-color:#ff2a2a; color:#ff2a2a;">🌍 МИРОВОЙ БОСС</button>
+                <button id="god-mode-btn" class="action-btn">💀 БЕССМЕРТИЕ: ВЫКЛ</button>
                 <a href="leaderboard.html" class="action-btn">🏆 РЕКОРДЫ</a>
             </div>
 
@@ -101,7 +113,6 @@
             <button id="start-btn">ИГРАТЬ</button>
         </div>
 
-        <!-- Модалка Навыков -->
         <div id="skill-modal" class="modal" style="display: none;">
             <h2>🌳 ДРЕВО НАВЫКОВ</h2>
             <div class="skill-tree">
@@ -124,18 +135,109 @@
             <button class="close-modal-btn">ЗАКРЫТЬ</button>
         </div>
 
-        <!-- Модалка Скинов -->
         <div id="skins-modal" class="modal" style="display: none;">
             <h2>🦖 ВЫБОР КЛАССА</h2>
             <div class="skins-grid" id="skins-grid"></div>
             <button class="close-modal-btn">ЗАКРЫТЬ</button>
         </div>
 
-        <!-- Модалка Сюжета (НОВОЕ) -->
         <div id="story-modal" class="modal story-modal" style="display: none;">
             <h2 id="story-title">ГЛАВА 1</h2>
             <div id="story-text" class="story-text"></div>
             <button id="story-next-btn" class="action-btn" style="font-size: 14px; padding: 12px 30px; margin-top: 20px;">ВПЕРЕД ▶</button>
+        </div>
+
+        <div id="artifact-modal" class="modal artifact-modal" style="display: none;">
+            <h2>🎁 ВЫБЕРИ АРТЕФАКТ</h2>
+            <p style="color: #aaa; font-size: 12px; margin-bottom: 15px;">Они изменят твой забег навсегда!</p>
+            <div class="artifact-grid" id="artifact-grid"></div>
+        </div>
+
+        <div id="altar-modal" class="modal altar-modal" style="display: none; border-color: #ff00ff;">
+            <h2 style="color: #ff00ff; text-shadow: 0 0 10px #ff00ff;">☠️ АЛТАРЬ КРОВИ</h2>
+            <div class="story-text" style="text-align: center; font-size: 14px;">
+                Древний дух предлагает сделку:<br><br>
+                Ты отдаешь <strong>1 сердце ❤️</strong><br>
+                Взамен получаешь <strong>3 случайных артефакта 🎁</strong>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                <button id="altar-accept-btn" class="action-btn" style="border-color: #ff00ff; color: #ff00ff;">СДЕЛКА</button>
+                <button id="altar-decline-btn" class="action-btn" style="border-color: #555; color: #888;">ОТКАЗАТЬСЯ</button>
+            </div>
+        </div>
+
+        <div id="roulette-modal" class="modal roulette-modal" style="display: none;">
+            <h2 style="color: #ff00ff; text-shadow: 0 0 10px #ff00ff;">🎰 ЗОЛОТАЯ РУЛЕТКА</h2>
+            <p style="color: #aaa; font-size: 12px; margin: 10px 0;">Стоимость спина: <strong style="color:#ffd700;">50 🪙</strong></p>
+            <div class="roulette-slots">
+                <div class="roulette-slot" id="slot-1">🎁</div>
+                <div class="roulette-slot" id="slot-2">🎁</div>
+                <div class="roulette-slot" id="slot-3">🎁</div>
+            </div>
+            <div id="roulette-result" class="roulette-result" style="display:none;"></div>
+            <button id="roulette-spin-btn" class="action-btn" style="border-color: #ff00ff; color: #ff00ff; font-size: 14px; padding: 12px 30px; margin-top: 15px;">КРУТИТЬ (50 🪙)</button>
+            <button class="close-modal-btn roulette-close-btn">ЗАКРЫТЬ</button>
+        </div>
+
+        <div id="trail-modal" class="modal" style="display: none; border-color: #00ffff; box-shadow: 0 0 50px rgba(0,255,255,0.4);">
+            <h2 style="color: #00ffff; text-shadow: 0 0 10px #00ffff;">🎨 ВЫБОР ШЛЕЙФА</h2>
+            <p style="color: #aaa; font-size: 12px; margin: 10px 0;">Шлейфы можно выиграть в рулетке.</p>
+            <div class="trail-grid" id="trail-grid"></div>
+            <button class="close-modal-btn">ЗАКРЫТЬ</button>
+        </div>
+
+        <div id="exchange-modal" class="modal" style="display: none; border-color: #ffd700; box-shadow: 0 0 50px rgba(255,215,0,0.4);">
+            <h2 style="color: #ffd700; text-shadow: 0 0 10px #ffd700;">💱 БИРЖА ДНК</h2>
+            <div class="exchange-rate" id="exchange-rate-display">Курс: 1 🧬 = ? 🪙</div>
+            <div style="color: #aaa; font-size: 11px; margin: 10px 0 20px 0;">Курс обновляется каждый день в 00:00 UTC</div>
+            <div class="exchange-buttons">
+                <button id="exchange-buy-btn" class="action-btn" style="border-color: #00ff88; color: #00ff88;">КУПИТЬ 10 🧬</button>
+                <button id="exchange-sell-btn" class="action-btn" style="border-color: #ff8c00; color: #ff8c00;">ПРОДАТЬ 10 🧬</button>
+            </div>
+            <div style="margin-top: 20px; color: #888; font-size: 13px;">
+                Баланс: <span style="color:#ffd700;">🪙 <span id="exchange-coins">0</span></span> · 
+                <span style="color:#00ffff;">🧬 <span id="exchange-dna">0</span></span>
+            </div>
+            <button class="close-modal-btn exchange-close-btn">ЗАКРЫТЬ</button>
+        </div>
+
+        <div id="pets-modal" class="modal" style="display: none; border-color: #00ffff; box-shadow: 0 0 50px rgba(0,255,255,0.4);">
+            <h2 style="color: #00ffff; text-shadow: 0 0 10px #00ffff;">🐾 ЭВОЛЮЦИЯ ПИТОМЦЕВ</h2>
+            <p style="color: #aaa; font-size: 12px; margin: 10px 0;">Улучшайте питомцев за ДНК 🧬</p>
+            <div class="pets-grid">
+                <div class="pet-card" id="dog-card">
+                    <div class="pet-icon">🐕</div>
+                    <div class="pet-name">Собачка</div>
+                    <div class="pet-level" id="dog-level-display">Ур. 1</div>
+                    <div class="pet-stats" id="dog-stats-display"></div>
+                    <button id="dog-upgrade-btn" class="pet-upgrade-btn">УЛУЧШИТЬ</button>
+                </div>
+                <div class="pet-card" id="drone-card">
+                    <div class="pet-icon">🛸</div>
+                    <div class="pet-name">Дрон</div>
+                    <div class="pet-level" id="drone-level-display">Ур. 1</div>
+                    <div class="pet-stats" id="drone-stats-display"></div>
+                    <button id="drone-upgrade-btn" class="pet-upgrade-btn">УЛУЧШИТЬ</button>
+                </div>
+            </div>
+            <button class="close-modal-btn pets-close-btn">ЗАКРЫТЬ</button>
+        </div>
+
+        <!-- НОВОЕ: Модалка Мирового Босса -->
+        <div id="world-boss-modal" class="modal world-boss-modal" style="display: none;">
+            <div class="wb-header" id="world-boss-title">🌍 МИРОВОЙ БОСС</div>
+            <div class="wb-hp-container">
+                <div class="wb-hp-fill" id="world-boss-hp-fill"></div>
+                <div class="wb-hp-text" id="world-boss-hp-text">0 / 0 HP</div>
+            </div>
+            <div class="wb-status" id="world-boss-status">Загрузка...</div>
+            <div style="color:#aaa; font-size:12px; margin:10px 0;">Ваш вклад: <span id="world-boss-your-damage" style="color:#00ff88; font-weight:bold;">0</span></div>
+            <div class="wb-top-list" id="world-boss-top-list">Загрузка...</div>
+            <button id="world-boss-claim-btn" class="action-btn wb-claim-btn" style="display:none;">🎁 ЗАБРАТЬ НАГРАДУ (500 🪙 + 200 🧬)</button>
+            <div style="margin-top: 10px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <button id="world-boss-refresh-btn" class="action-btn" style="border-color:#00ffff; color:#00ffff;">🔄 ОБНОВИТЬ</button>
+                <button class="close-modal-btn world-boss-close-btn">ЗАКРЫТЬ</button>
+            </div>
         </div>
     </div>
 
