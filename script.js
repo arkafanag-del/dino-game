@@ -490,6 +490,8 @@ function spinRoulette() {
     }
   }, 60);
 }
+// ВОТ СЮДА ВСТАВЛЯЙ:
+rouletteSpinBtn.onclick = () => spinRoulette();
 
 function applyPrize(prize, resultEl = rouletteResult) {
   let resultText = `🎉 ВЫИГРЫШ: ${prize.label}`;
