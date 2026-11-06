@@ -24,6 +24,10 @@
             <div id="god-badge" style="display:none;">👻</div>
             <div id="daily-badge" style="display:none; color:#ffd700; font-size:10px;">🔥 DAILY</div>
             <button id="mute-btn" class="icon-btn">🔊</button>
+            <div id="player-badge" style="display:none;">
+                <span id="player-badge-name">—</span>
+                <button id="logout-btn" class="icon-btn" title="Выйти из аккаунта">🚪</button>
+            </div>
         </div>
         <div class="score-board">
             <span id="high-score">HI 00000</span>
@@ -66,6 +70,21 @@
         <div id="boss-container" style="z-index: 8; position: absolute; inset: 0; pointer-events: none;"></div>
 
         <div class="player" id="player-character"></div>
+
+        <div id="auth-modal" class="modal auth-modal" style="display: none;">
+            <h2>🔐 ВХОД В ИГРУ</h2>
+            <p class="auth-hint">Имя — это ваш аккаунт. Пароль от 8 до 128 символов.<br>Монеты, скины и рекорды хранятся на сервере.</p>
+            <div class="auth-fields">
+                <input id="auth-name-input" type="text" maxlength="20" autocomplete="username" placeholder="Имя игрока">
+                <input id="auth-password-input" type="password" maxlength="128" autocomplete="current-password" placeholder="Пароль">
+            </div>
+            <div id="auth-error" class="auth-error"></div>
+            <div class="auth-actions">
+                <button id="auth-login-btn" class="action-btn">ВОЙТИ</button>
+                <button id="auth-register-btn" class="action-btn">РЕГИСТРАЦИЯ</button>
+            </div>
+            <p class="auth-note">Нет аккаунта? Нажмите «Регистрация» — имя займётся автоматически.</p>
+        </div>
 
         <div id="game-menu">
             <h1 id="menu-title">ДИНОЗАВРИК 8.4</h1>
@@ -248,8 +267,9 @@
             <div style="color: #aaa; font-size: 11px; margin: 10px 0 20px 0;">Курс обновляется каждый день в 00:00 UTC</div>
             <div class="exchange-buttons">
                 <button id="exchange-buy-btn" class="action-btn" style="border-color: #00ff88; color: #00ff88;">КУПИТЬ 10 🧬</button>
-                <button id="exchange-sell-btn" class="action-btn" style="border-color: #ff8c00; color: #ff8c00;">ПРОДАТЬ 10 🧬</button>
+                <button id="exchange-sell-btn" class="action-btn" style="border-color: #ff8c00; color: #ff8c00;" disabled title="Продажа ДНК отключена: сервер не может проверить клиентскую ДНК">ПРОДАЖА ОТКЛЮЧЕНА</button>
             </div>
+            <p class="exchange-note">Продажа ДНК отключена: сервер не может проверить клиентскую ДНК, поэтому такие монеты было бы слишком легко накрутить.</p>
             <div style="margin-top: 20px; color: #888; font-size: 13px;">
                 Баланс: <span style="color:#ffd700;">🪙 <span id="exchange-coins">0</span></span> · 
                 <span style="color:#00ffff;">🧬 <span id="exchange-dna">0</span></span>

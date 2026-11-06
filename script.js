@@ -48,6 +48,15 @@ const mobileJumpBtn = document.getElementById('mobile-jump-btn');
 const muteBtn = document.getElementById('mute-btn');
 const playerNameInput = document.getElementById('player-name-input');
 const saveRecordBtn = document.getElementById('save-record-btn');
+const authModal = document.getElementById('auth-modal');
+const authNameInput = document.getElementById('auth-name-input');
+const authPasswordInput = document.getElementById('auth-password-input');
+const authErrorEl = document.getElementById('auth-error');
+const authLoginBtn = document.getElementById('auth-login-btn');
+const authRegisterBtn = document.getElementById('auth-register-btn');
+const playerBadge = document.getElementById('player-badge');
+const playerBadgeName = document.getElementById('player-badge-name');
+const logoutBtn = document.getElementById('logout-btn');
 
 const rouletteBtn = document.getElementById('roulette-btn');
 const rouletteModal = document.getElementById('roulette-modal');
@@ -102,7 +111,265 @@ const altarModal = document.getElementById('altar-modal');
 const altarAcceptBtn = document.getElementById('altar-accept-btn');
 const altarDeclineBtn = document.getElementById('altar-decline-btn');
 
-const API_BASE = 'https://dino-game-backend-summer-tide-6155.fly.dev';
+const API_BASE = (() => {
+  const override = new URLSearchParams(location.search).get('api');
+  if (override) return override.replace(/\/+$/, '');
+  // При локальной разработке страницу обычно отдают с localhost —
+  // тогда по умолчанию идём в локальный backend, а не в прод.
+  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    return 'http://127.0.0.1:8000';
+  }
+  return 'https://dino-game-backend-summer-tide-6155.fly.dev';
+})();
+
+// --- АККАУНТ И АВТОРИЗАЦИЯ ---
+let authToken = localStorage.getItem('dino_auth_token') || '';
+let authName = localStorage.getItem('dino_auth_name') || '';
+let activeRunId = null;
+let runCoinsStart = 0;
+let runBossesKilled = 0;
+let isRunFinalizing = false;
+
+async function apiFetch(path, options = {}) {
+  const opts = { ...options };
+  const headers = new Headers(opts.headers || {});
+  if (opts.body && typeof opts.body === 'string' && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+  if (authToken) headers.set('Authorization', `Bearer ${authToken}`);
+  opts.headers = headers;
+
+  const response = await fetch(`${API_BASE}${path}`, opts);
+  if (
+    response.status === 401 &&
+    authToken &&
+    !path.startsWith('/api/auth/login') &&
+    !path.startsWith('/api/auth/register')
+  ) {
+    expireSession();
+  }
+  return response;
+}
+
+function expireSession() {
+  authToken = '';
+  authName = '';
+  playerName = '';
+  localStorage.removeItem('dino_auth_token');
+  localStorage.removeItem('dino_auth_name');
+  activeRunId = null;
+  updateAuthUI();
+  showAuthModal('Сессия истекла. Войдите снова.');
+}
+
+function updateAuthUI() {
+  if (playerName) {
+    playerBadge.style.display = 'flex';
+    playerBadgeName.textContent = playerName;
+  } else {
+    playerBadge.style.display = 'none';
+    playerBadgeName.textContent = '';
+  }
+  playerNameInput.style.display = 'none';
+  saveRecordBtn.style.display = 'none';
+}
+
+function showAuthModal(message) {
+  authErrorEl.textContent = message || '';
+  authModal.style.display = 'block';
+  authNameInput.value = authName || authNameInput.value || '';
+  setTimeout(() => {
+    if (authModal.style.display === 'block') {
+      (authNameInput.value ? authPasswordInput : authNameInput).focus();
+    }
+  }, 50);
+}
+
+function hideAuthModal() {
+  authModal.style.display = 'none';
+  authErrorEl.textContent = '';
+}
+
+function setAuthBusy(busy) {
+  authLoginBtn.disabled = busy;
+  authRegisterBtn.disabled = busy;
+  authLoginBtn.textContent = busy ? '...' : 'ВОЙТИ';
+  authRegisterBtn.textContent = busy ? '...' : 'РЕГИСТРАЦИЯ';
+}
+
+function authErrorMessage(status, data) {
+  const detail = data && data.detail;
+  const text = Array.isArray(detail)
+    ? detail.map(item => item.msg || '').join('; ')
+    : (typeof detail === 'string' ? detail : '');
+  if (status === 409 || text.includes('already taken')) {
+    return 'Это имя уже занято. Войдите или выберите другое.';
+  }
+  if (status === 401 || text.includes('Invalid name or password')) {
+    return 'Неверное имя или пароль.';
+  }
+  if (status === 429) return 'Слишком много попыток. Подождите минуту.';
+  if (text.includes('Password must be')) return 'Пароль должен быть от 8 до 128 символов.';
+  if (text.includes('Invalid player name')) return 'Недопустимое имя. Можно буквы, цифры, пробел, _ и -.';
+  return text || `Ошибка ${status}`;
+}
+
+const CLIENT_PROGRESS_KEYS = [
+  'dino_coins', 'dino_dna', 'dino_unlocked_skins', 'dino_selected_skin',
+  'dino_trails_unlocked', 'dino_active_trail',
+  'dino_glasses', 'dino_glasses_active', 'dino_shoes', 'dino_shoes_active',
+  'dino_magnet', 'dino_magnet_active', 'dino_pet', 'dino_pet_active',
+  'dino_dog', 'dino_dog_active', 'dino_dog_level', 'dino_drone_level',
+  'dino_unlocked_biome', 'dino_highscore', 'dino_daily_hs', 'dino_god_mode',
+  'dino_casino_stats', 'dino_seen_intro',
+  'skill_f_dmg', 'skill_f_hp', 'skill_a_jump', 'skill_a_magnet',
+  'skill_l_coin', 'skill_l_event'
+];
+
+function resetClientProgress() {
+  CLIENT_PROGRESS_KEYS.forEach(key => localStorage.removeItem(key));
+}
+
+// Привязывает локальный прогресс (ДНК, шлейфы, навыки) к аккаунту.
+// При смене имени прогресс сбрасывается, при первом входе — сохраняется.
+function adoptAccount(profile, fallbackName) {
+  const name = String((profile && profile.name) || fallbackName || authName || '').trim();
+  if (!name) return false;
+
+  const owner = localStorage.getItem('dino_local_owner') || '';
+  const switched = Boolean(owner && owner !== name);
+  if (switched) resetClientProgress();
+
+  localStorage.setItem('dino_local_owner', name);
+  localStorage.setItem('dino_auth_name', name);
+  localStorage.setItem('dino_player_name', name);
+  authName = name;
+  playerName = name;
+
+  if (profile) applyServerProfile(profile);
+  updateAuthUI();
+  updateNameUI();
+  return switched;
+}
+
+async function handleAuthSuccess(data, fallbackName) {
+  if (!data || !data.token || !data.profile) {
+    throw new Error('INVALID_AUTH_RESPONSE');
+  }
+  authToken = data.token;
+  localStorage.setItem('dino_auth_token', authToken);
+  const switched = adoptAccount(data.profile, fallbackName);
+  hideAuthModal();
+  if (switched) {
+    // Локальные переменные (ДНК, питомцы, навыки) уже описывают старый
+    // аккаунт — перезагружаем страницу, чтобы прочитать новые значения.
+    location.reload();
+    return;
+  }
+  playSFX('buy');
+  showToast(`✅ Аккаунт: ${escapeHTML(playerName)}`);
+  loadWorldBoss();
+  loadExchangeRate();
+  loadLeaderboard();
+}
+
+async function submitAuth(mode) {
+  const name = authNameInput.value.trim();
+  const password = authPasswordInput.value;
+  authErrorEl.textContent = '';
+
+  if (!name) { authErrorEl.textContent = 'Введите имя игрока.'; return; }
+  if (mode === 'register' && !/^[\p{L}\p{N}_ \-]{1,20}$/u.test(name)) {
+    authErrorEl.textContent = 'Недопустимое имя. Можно буквы, цифры, пробел, _ и -.';
+    return;
+  }
+  if (!password) { authErrorEl.textContent = 'Введите пароль.'; return; }
+  if (mode === 'register' && (password.length < 8 || password.length > 128)) {
+    authErrorEl.textContent = 'Пароль должен быть от 8 до 128 символов.';
+    return;
+  }
+
+  setAuthBusy(true);
+  try {
+    const r = await apiFetch(`/api/auth/${mode}`, {
+      method: 'POST',
+      body: JSON.stringify({ name, password })
+    });
+    const data = await r.json().catch(() => null);
+    if (!r.ok) {
+      authErrorEl.textContent = authErrorMessage(r.status, data);
+      return;
+    }
+    authPasswordInput.value = '';
+    await handleAuthSuccess(data, name);
+  } catch (e) {
+    console.error('Auth failed', e);
+    authErrorEl.textContent = 'Сервер недоступен. Попробуйте ещё раз.';
+  } finally {
+    setAuthBusy(false);
+  }
+}
+
+async function initAuth() {
+  updateAuthUI();
+  if (!authToken) {
+    showAuthModal();
+    return;
+  }
+  try {
+    const r = await apiFetch('/api/auth/me');
+    if (!r.ok) {
+      if (r.status !== 401) showAuthModal('Не удалось загрузить аккаунт.');
+      return;
+    }
+    const profile = await r.json().catch(() => null);
+    if (!profile || typeof profile !== 'object') {
+      showAuthModal('Сервер вернул некорректный профиль.');
+      return;
+    }
+    const switched = adoptAccount(profile, authName);
+    hideAuthModal();
+    if (switched) {
+      location.reload();
+      return;
+    }
+    loadWorldBoss();
+    loadExchangeRate();
+    loadLeaderboard();
+  } catch (e) {
+    console.error('Session restore failed', e);
+    showAuthModal('Сервер недоступен. Проверьте подключение.');
+  }
+}
+
+async function logout() {
+  try {
+    if (authToken) await apiFetch('/api/auth/logout', { method: 'POST' });
+  } catch (e) {
+    console.error('Logout failed', e);
+  }
+  authToken = '';
+  authName = '';
+  playerName = '';
+  activeRunId = null;
+  localStorage.removeItem('dino_auth_token');
+  localStorage.removeItem('dino_auth_name');
+  localStorage.removeItem('dino_player_name');
+  updateAuthUI();
+  updateNameUI();
+  showAuthModal();
+  showToast('🚪 Вы вышли из аккаунта');
+}
+
+authLoginBtn.onclick = () => submitAuth('login');
+authRegisterBtn.onclick = () => submitAuth('register');
+authPasswordInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') submitAuth('login');
+});
+authNameInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') authPasswordInput.focus();
+});
+logoutBtn.onclick = () => logout();
 
 // --- МИРОВОЙ БОСС ---
 let currentWorldBossState = null;
@@ -110,11 +377,9 @@ let pendingWorldBossDamage = 0;
 let lastWorldBossFlush = Date.now();
 
 async function loadWorldBoss() {
+  if (!authToken) return;
   try {
-    const url = playerName
-      ? `${API_BASE}/api/world-boss?name=${encodeURIComponent(playerName)}`
-      : `${API_BASE}/api/world-boss`;
-    const r = await fetch(url);
+    const r = await apiFetch('/api/world-boss');
     if (!r.ok) throw new Error("Server error");
     const d = await r.json();
     currentWorldBossState = d;
@@ -180,8 +445,20 @@ function renderWorldBossModal() {
   }
 }
 
-async function flushWorldBossDamage() {
-  if (pendingWorldBossDamage <= 0 || !playerName || !currentWorldBossState || currentWorldBossState.killed) {
+let worldBossFlushChain = Promise.resolve();
+
+// Все отправки урона выполняются по очереди: иначе финальная отправка
+// могла бы обогнать предыдущую и попасть уже после закрытия забега.
+function flushWorldBossDamage() {
+  worldBossFlushChain = worldBossFlushChain.then(
+    () => doFlushWorldBossDamage(),
+    () => doFlushWorldBossDamage()
+  );
+  return worldBossFlushChain;
+}
+
+async function doFlushWorldBossDamage() {
+  if (pendingWorldBossDamage <= 0 || !authToken || !activeRunId || !playerName || !currentWorldBossState || currentWorldBossState.killed) {
     if (pendingWorldBossDamage > 0 && (!currentWorldBossState || currentWorldBossState.killed)) {
       pendingWorldBossDamage = 0;
     }
@@ -192,11 +469,13 @@ async function flushWorldBossDamage() {
   pendingWorldBossDamage = 0;
   lastWorldBossFlush = Date.now();
   try {
-    const r = await fetch(`${API_BASE}/api/world-boss/damage`, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ name: playerName, damage: dmg })
+    const r = await apiFetch('/api/world-boss/damage', {
+      method: 'POST',
+      body: JSON.stringify({ name: playerName, damage: dmg, run_id: activeRunId })
     });
     if (!r.ok) {
+      // Забег уже завершён/просрочен — оставшийся урон начислить нельзя.
+      if (r.status === 400) return;
       pendingWorldBossDamage += dmg;
       return;
     }
@@ -217,25 +496,28 @@ async function flushWorldBossDamage() {
 }
 
 async function claimWorldBossReward() {
-  if (!playerName) { showToast('⚠️ Сначала сохраните имя'); return; }
+  if (!playerName) { showAuthModal(); return; }
   try {
-    const r = await fetch(`${API_BASE}/api/world-boss/claim`, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ name: playerName })
+    const d = await enqueueProfileSync(async () => {
+      const r = await apiFetch('/api/world-boss/claim', {
+        method: 'POST',
+        body: JSON.stringify({ name: playerName })
+      });
+      const data = await r.json();
+      if (data.status === 'success' && typeof data.new_coins === 'number') {
+        // Сервер уже начислил монеты — берём его баланс.
+        applyServerProfile({ coins: data.new_coins });
+      }
+      return data;
     });
-    const d = await r.json();
+
     if (d.status === 'success') {
-      coins += d.reward_coins;
       dna += d.reward_dna || 0;
-      
-      localStorage.setItem('dino_coins', coins);
       localStorage.setItem('dino_dna', dna);
-      coinsDisplay.textContent = `🪙 ${coins}`;
       dnaDisplay.textContent = `🧬 ${dna}`;
       playSFX('buy');
       showToast(`🎁 НАГРАДА ПОЛУЧЕНА!\n+${d.reward_coins} 🪙 · +${d.reward_dna} 🧬`, true);
       loadWorldBoss();
-      saveProfileToServer();
       updateCasinoCoinsDisplay();
     } else if (d.status === 'already_claimed') {
       showToast('✅ Вы уже получили награду');
@@ -429,7 +711,9 @@ trailBtn.onclick = () => {
   trailModal.style.display = 'block';
 };
 
-// --- РУЛЕТКА (СТАРАЯ) ---
+// --- РУЛЕТКА ---
+// Таблица используется только для «мелькания» слотов.
+// Реальный приз выбирает сервер в /api/casino/roulette.
 const ROULETTE_PRIZES = [
   { id: 'coins_30', icon: '🪙', label: '+30 🪙', weight: 30, type: 'coins', value: 30 },
   { id: 'coins_75', icon: '💰', label: '+75 🪙', weight: 20, type: 'coins', value: 75 },
@@ -443,33 +727,39 @@ const ROULETTE_PRIZES = [
   { id: 'trail_gold', icon: '⭐', label: 'Золото', weight: 3, type: 'trail', value: 'gold' }
 ];
 
+const ROULETTE_COST = 50;
 let isRouletteSpinning = false;
 
-function pickRandomPrize() {
-  const total = ROULETTE_PRIZES.reduce((s, p) => s + p.weight, 0);
-  let r = Math.random() * total;
-  for (const p of ROULETTE_PRIZES) {
-    r -= p.weight;
-    if (r <= 0) return p;
-  }
-  return ROULETTE_PRIZES[0];
-}
-
-function spinRoulette() {
+async function spinRoulette() {
   if (isRouletteSpinning) return;
-  if (coins < 50) { showToast('⚠️ Нужно 50 🪙'); return; }
-  coins -= 50;
-  casinoStats.wagered += 50;
-  saveCasinoStats();
-  coinsDisplay.textContent = `🪙 ${coins}`;
-  localStorage.setItem('dino_coins', coins);
-  saveProfileToServer();
+  if (!playerName) { showAuthModal(); return; }
+  if (coins < ROULETTE_COST) { showToast(`⚠️ Нужно ${ROULETTE_COST} 🪙`); return; }
+
   isRouletteSpinning = true;
   rouletteSpinBtn.disabled = true;
   rouletteSpinBtn.textContent = 'КРУТИМ...';
   rouletteResult.style.display = 'none';
-  const winner = pickRandomPrize();
   rouletteSlots.forEach(slot => { slot.classList.add('spinning'); slot.classList.remove('win'); });
+
+  let data;
+  try {
+    data = await enqueueProfileSync(async () => {
+      const d = await postCasino('/api/casino/roulette', {});
+      // Сервер уже списал ставку и начислил приз. Показываем его баланс.
+      applyServerProfile(d, { invalidateSaves: true });
+      return d;
+    });
+  } catch (e) {
+    rouletteSlots.forEach(slot => { slot.classList.remove('spinning'); slot.textContent = '🎁'; });
+    rouletteSpinBtn.disabled = false;
+    rouletteSpinBtn.textContent = `КРУТИТЬ (${ROULETTE_COST} 🪙)`;
+    isRouletteSpinning = false;
+    showToast(`❌ ${casinoErrorText(e)}`);
+    if (e && e.status === 400) loadProfileFromServer();
+    return;
+  }
+
+  const winner = data.prize;
   let tickCount = 0;
   const totalTicks = 40;
   const interval = setInterval(() => {
@@ -486,68 +776,79 @@ function spinRoulette() {
         slot.textContent = winner.icon;
       });
       playSFX('buy');
-      setTimeout(() => applyPrize(winner, rouletteResult), 500);
+      setTimeout(() => {
+        applyCasinoPrize(data, rouletteResult);
+        setTimeout(() => {
+          isRouletteSpinning = false;
+          rouletteSpinBtn.disabled = false;
+          rouletteSpinBtn.textContent = `КРУТИТЬ (${ROULETTE_COST} 🪙)`;
+          rouletteSlots.forEach(slot => slot.classList.remove('win'));
+        }, 1500);
+      }, 500);
     }
   }, 60);
 }
-// ВОТ СЮДА ВСТАВЛЯЙ:
 rouletteSpinBtn.onclick = () => spinRoulette();
 
-function applyPrize(prize, resultEl = rouletteResult) {
-  let resultText = `🎉 ВЫИГРЫШ: ${prize.label}`;
+// Общий обработчик приза, полученного с сервера.
+// Монеты уже начислены сервером и пришли в data.coins.
+// Здесь применяются только локальные ресурсы: ДНК, шлейфы, косметика.
+function applyCasinoPrize(data, resultEl = rouletteResult) {
+  const prize = data && data.prize;
+  if (!prize) return;
+
+  let resultText = '';
+  let color = '#ffd700';
+  let borderColor = '#ffd700';
+
   if (prize.type === 'coins') {
-    coins += prize.value;
-    casinoStats.won += prize.value;
-    localStorage.setItem('dino_coins', coins);
-    coinsDisplay.textContent = `🪙 ${coins}`;
+    casinoStats.won += data.coins_won || 0;
+    resultText = `🎉 ВЫИГРЫШ: ${prize.label}`;
+    if (prize.clamped) resultText += ` (начислено ${prize.credited} 🪙)`;
   } else if (prize.type === 'dna') {
-    dna += prize.value;
-    casinoStats.won += prize.value * 5;
+    const value = parseInt(prize.value, 10) || 0;
+    dna += value;
     localStorage.setItem('dino_dna', dna);
     dnaDisplay.textContent = `🧬 ${dna}`;
+    casinoStats.won += value * 5;
+    resultText = `🎉 ВЫИГРЫШ: ${prize.label}`;
   } else if (prize.type === 'skin') {
-    if (unlockedSkins.includes(prize.value)) {
-      coins += 30;
-      casinoStats.won += 30;
-      localStorage.setItem('dino_coins', coins);
-      coinsDisplay.textContent = `🪙 ${coins}`;
-      resultText = `🎉 Скин "${prize.label}" уже был. Компенсация: +30 🪙`;
+    if (prize.already_owned) {
+      const compensation = data.coins_won || prize.compensation || 0;
+      casinoStats.won += compensation;
+      resultText = `🎉 Скин "${prize.label}" уже был. Компенсация: +${compensation} 🪙`;
     } else {
-      unlockedSkins.push(prize.value);
-      selectedSkin = prize.value;
-      localStorage.setItem('dino_unlocked_skins', JSON.stringify(unlockedSkins));
-      localStorage.setItem('dino_selected_skin', selectedSkin);
-      updatePlayerSkin();
-      renderSkins();
+      resultText = `🎉 ВЫИГРЫШ: Скин "${prize.label}" (активирован!)`;
     }
+    updatePlayerSkin();
+    renderSkins();
   } else if (prize.type === 'trail') {
-    if (!unlockedTrails.includes(prize.value)) {
+    if (prize.value && !unlockedTrails.includes(prize.value)) {
       unlockedTrails.push(prize.value);
       localStorage.setItem('dino_trails_unlocked', JSON.stringify(unlockedTrails));
     }
-    setActiveTrail(prize.value);
-    resultText = `🎉 ВЫИГРЫШ: Шлейф "${prize.label}" (активирован!)`;
+    if (prize.value) setActiveTrail(prize.value);
+    resultText = prize.value === 'rainbow'
+      ? '🌈 ДЖЕКПОТ! Легендарный шлейф «Радуга» активирован!'
+      : `🎉 ВЫИГРЫШ: Шлейф "${prize.label}" (активирован!)`;
+    if (prize.value === 'rainbow') { color = '#ff00ff'; borderColor = '#ff00ff'; }
+  } else {
+    resultText = prize.label || 'Без выигрыша';
+    color = '#ff2a2a';
+    borderColor = '#ff2a2a';
   }
-  
+
   saveCasinoStats();
   if (resultEl) {
     resultEl.textContent = resultText;
     resultEl.style.display = 'block';
-    resultEl.style.color = '#ffd700';
-    resultEl.style.borderColor = '#ffd700';
+    resultEl.style.color = color;
+    resultEl.style.borderColor = borderColor;
   }
-  
-  playSFX('buy');
+
+  playSFX(prize.type === 'none' ? 'death' : 'buy');
   updateShopUI();
   updateCasinoStatsDisplay();
-  saveProfileToServer();
-  
-  setTimeout(() => {
-    isRouletteSpinning = false;
-    rouletteSpinBtn.disabled = false;
-    rouletteSpinBtn.textContent = 'КРУТИТЬ (50 🪙)';
-    rouletteSlots.forEach(slot => slot.classList.remove('win'));
-  }, 1500);
 }
 
 // ==========================================
@@ -618,45 +919,60 @@ casinoTabs.forEach(btn => {
 // --- 🪙 МОНЕТКА ---
 const COINFLIP_COST = 25;
 
-function playCoinFlip(choice) {
-    if (isCoinflipSpinning || coins < COINFLIP_COST) return;
-    isCoinflipSpinning = true;
-    coins -= COINFLIP_COST;
-    casinoStats.wagered += COINFLIP_COST;
-    saveCasinoStats();
-    coinsDisplay.textContent = `🪙 ${coins}`;
-    updateCasinoStatsDisplay();
-    saveProfileToServer();
+async function playCoinFlip(choice) {
+    if (isCoinflipSpinning) return;
+    if (!playerName) { showAuthModal(); return; }
+    if (coins < COINFLIP_COST) { showToast(`⚠️ Нужно ${COINFLIP_COST} 🪙`); return; }
 
+    isCoinflipSpinning = true;
+    coinFlipHeadsBtn.disabled = true;
+    coinFlipTailsBtn.disabled = true;
     coinFlipResult.style.display = 'none';
     coinFlipDisplay.textContent = '⏳';
     coinFlipDisplay.style.animation = 'spinFlip 0.6s ease-out';
 
+    let data;
+    try {
+        data = await enqueueProfileSync(async () => {
+            const d = await postCasino('/api/casino/coinflip', { choice });
+            applyServerProfile(d, { invalidateSaves: true });
+            return d;
+        });
+    } catch (e) {
+        coinFlipDisplay.style.animation = 'none';
+        coinFlipDisplay.textContent = '🪙';
+        isCoinflipSpinning = false;
+        updateCasinoCoinsDisplay();
+        showToast(`❌ ${casinoErrorText(e)}`);
+        if (e && e.status === 400) loadProfileFromServer();
+        return;
+    }
+
+    casinoStats.wagered += data.bet;
+
+    const side = data.result && data.result.side;
+    const won = side === choice;
+
     setTimeout(() => {
         coinFlipDisplay.style.animation = 'none';
-        const result = Math.random() < 0.5 ? 'heads' : 'tails';
-        coinFlipDisplay.textContent = result === 'heads' ? '👑' : '🪙';
+        coinFlipDisplay.textContent = side === 'heads' ? '👑' : '🪙';
 
-        if (result === choice) {
-            const prize = COINFLIP_COST * 2;
-            coins += prize;
-            casinoStats.won += prize;
-            saveCasinoStats();
-            coinsDisplay.textContent = `🪙 ${coins}`;
-            coinFlipResult.textContent = `🎉 УГАДАЛ! +${prize} 🪙`;
+        if (won) {
+            casinoStats.won += data.coins_won;
+            coinFlipResult.textContent = `🎉 УГАДАЛ! +${data.coins_won} 🪙`;
             coinFlipResult.style.color = '#00ff88';
             coinFlipResult.style.borderColor = '#00ff88';
             playSFX('buy');
         } else {
-            coinFlipResult.textContent = `😢 Не угадал. -${COINFLIP_COST} 🪙`;
+            coinFlipResult.textContent = `😢 Не угадал. -${data.bet} 🪙`;
             coinFlipResult.style.color = '#ff2a2a';
             coinFlipResult.style.borderColor = '#ff2a2a';
             playSFX('death');
         }
         coinFlipResult.style.display = 'block';
+        saveCasinoStats();
         isCoinflipSpinning = false;
         updateCasinoStatsDisplay();
-        saveProfileToServer();
     }, 600);
 }
 
@@ -668,6 +984,7 @@ const DICE_COST = 10;
 
 diceGrid.querySelectorAll('.dice-btn').forEach(btn => {
     btn.onclick = () => {
+        if (isDiceRolling) return;
         selectedDiceValue = parseInt(btn.dataset.value);
         diceGrid.querySelectorAll('.dice-btn').forEach(b => b.classList.toggle('selected', b === btn));
         updateCasinoCoinsDisplay();
@@ -675,18 +992,37 @@ diceGrid.querySelectorAll('.dice-btn').forEach(btn => {
     };
 });
 
-diceRollBtn.onclick = () => {
-    if (isDiceRolling || selectedDiceValue === null || coins < DICE_COST) return;
+diceRollBtn.onclick = async () => {
+    if (isDiceRolling || selectedDiceValue === null) return;
+    if (!playerName) { showAuthModal(); return; }
+    if (coins < DICE_COST) { showToast(`⚠️ Нужно ${DICE_COST} 🪙`); return; }
 
+    const chosen = selectedDiceValue;
     isDiceRolling = true;
-    coins -= DICE_COST;
-    casinoStats.wagered += DICE_COST;
-    saveCasinoStats();
-    coinsDisplay.textContent = `🪙 ${coins}`;
-    updateCasinoStatsDisplay();
-    saveProfileToServer();
-
+    updateCasinoCoinsDisplay();
     diceResult.style.display = 'none';
+    diceDisplay.style.transform = 'none';
+
+    let data;
+    try {
+        data = await enqueueProfileSync(async () => {
+            const d = await postCasino('/api/casino/dice', { value: chosen });
+            applyServerProfile(d, { invalidateSaves: true });
+            return d;
+        });
+    } catch (e) {
+        isDiceRolling = false;
+        updateCasinoCoinsDisplay();
+        showToast(`❌ ${casinoErrorText(e)}`);
+        if (e && e.status === 400) loadProfileFromServer();
+        return;
+    }
+
+    casinoStats.wagered += data.bet;
+
+    const rolled = data.result && data.result.rolled;
+    const won = rolled === chosen;
+
     let ticks = 0;
     const interval = setInterval(() => {
         diceDisplay.textContent = '🎲';
@@ -695,29 +1031,24 @@ diceRollBtn.onclick = () => {
         if (ticks > 15) {
             clearInterval(interval);
             diceDisplay.style.transform = 'none';
-            const rolled = Math.floor(Math.random() * 6) + 1;
             diceDisplay.textContent = ['⚀','⚁','⚂','⚃','⚄','⚅'][rolled - 1];
 
-            if (rolled === selectedDiceValue) {
-                const prize = DICE_COST * 5;
-                coins += prize;
-                casinoStats.won += prize;
-                saveCasinoStats();
-                coinsDisplay.textContent = `🪙 ${coins}`;
-                diceResult.textContent = `🎉 УГАДАЛ ${rolled}! +${prize} 🪙`;
+            if (won) {
+                casinoStats.won += data.coins_won;
+                diceResult.textContent = `🎉 УГАДАЛ ${rolled}! +${data.coins_won} 🪙`;
                 diceResult.style.color = '#00ff88';
                 diceResult.style.borderColor = '#00ff88';
                 playSFX('buy');
             } else {
-                diceResult.textContent = `😢 Выпало ${rolled}. -${DICE_COST} 🪙`;
+                diceResult.textContent = `😢 Выпало ${rolled}. -${data.bet} 🪙`;
                 diceResult.style.color = '#ff2a2a';
                 diceResult.style.borderColor = '#ff2a2a';
                 playSFX('death');
             }
             diceResult.style.display = 'block';
+            saveCasinoStats();
             isDiceRolling = false;
             updateCasinoStatsDisplay();
-            saveProfileToServer();
         }
     }, 60);
 };
@@ -725,11 +1056,13 @@ diceRollBtn.onclick = () => {
 // --- 💎 ДЖЕКПОТ ---
 const JACKPOT_COST = 150;
 
+// Таблица используется только для «мелькания» слотов.
+// Реальный приз выбирает сервер в /api/casino/jackpot.
 const JACKPOT_PRIZES = [
-    { icon:'🪙', label:'+100 🪙',        weight:25, type:'coins', value:100 },
-    { icon:'🪙', label:'+300 🪙',        weight:20, type:'coins', value:300 },
-    { icon:'💰', label:'+750 🪙',        weight:10, type:'coins', value:750 },
-    { icon:'🧬', label:'+50 🧬',         weight:20, type:'dna',   value:50  },
+    { icon:'🪙', label:'+100 🪙',        weight:30, type:'coins', value:100 },
+    { icon:'🪙', label:'+300 🪙',        weight:15, type:'coins', value:300 },
+    { icon:'💰', label:'+750 🪙',        weight:6,  type:'coins', value:750 },
+    { icon:'🧬', label:'+50 🧬',         weight:24, type:'dna',   value:50  },
     { icon:'🧪', label:'+150 🧬',        weight:10, type:'dna',   value:150 },
     { icon:'🔥', label:'Шлейф Огонь',     weight:5,  type:'trail', value:'fire' },
     { icon:'💠', label:'Шлейф Неон',      weight:5,  type:'trail', value:'neon' },
@@ -738,29 +1071,35 @@ const JACKPOT_PRIZES = [
     { icon:'💎', label:'ДЖЕКПОТ! +2000 🪙', weight:1, type:'coins', value:2000 }
 ];
 
-function pickJackpotPrize() {
-    const total = JACKPOT_PRIZES.reduce((s, p) => s + p.weight, 0);
-    let r = Math.random() * total;
-    for (const p of JACKPOT_PRIZES) { r -= p.weight; if (r <= 0) return p; }
-    return JACKPOT_PRIZES[0];
-}
-
-jackpotSpinBtn.onclick = () => {
-    if (isJackpotSpinning || coins < JACKPOT_COST) return;
+jackpotSpinBtn.onclick = async () => {
+    if (isJackpotSpinning) return;
+    if (!playerName) { showAuthModal(); return; }
+    if (coins < JACKPOT_COST) { showToast(`⚠️ Нужно ${JACKPOT_COST} 🪙`); return; }
 
     isJackpotSpinning = true;
-    coins -= JACKPOT_COST;
-    casinoStats.wagered += JACKPOT_COST;
-    saveCasinoStats();
-    coinsDisplay.textContent = `🪙 ${coins}`;
-    updateCasinoStatsDisplay();
-    saveProfileToServer();
-
     jackpotSpinBtn.disabled = true;
     jackpotSpinBtn.textContent = 'КРУТИМ...';
     jackpotResult.style.display = 'none';
 
-    const winner = pickJackpotPrize();
+    let data;
+    try {
+        data = await enqueueProfileSync(async () => {
+            const d = await postCasino('/api/casino/jackpot', {});
+            applyServerProfile(d, { invalidateSaves: true });
+            return d;
+        });
+    } catch (e) {
+        isJackpotSpinning = false;
+        jackpotSpinBtn.disabled = false;
+        jackpotSpinBtn.textContent = `КРУТИТЬ (${JACKPOT_COST} 🪙)`;
+        showToast(`❌ ${casinoErrorText(e)}`);
+        if (e && e.status === 400) loadProfileFromServer();
+        return;
+    }
+
+    casinoStats.wagered += data.bet;
+
+    const winner = data.prize;
     const slots = [jackpotSlot1, jackpotSlot2, jackpotSlot3];
     slots.forEach(s => { s.classList.add('spinning'); s.classList.remove('win'); });
 
@@ -775,28 +1114,11 @@ jackpotSpinBtn.onclick = () => {
             clearInterval(interval);
             slots.forEach(s => { s.classList.remove('spinning'); s.classList.add('win'); s.textContent = winner.icon; });
             playSFX('buy');
-
-            if (winner.type === 'trail' && winner.value === 'rainbow') {
-                if (!unlockedTrails.includes('rainbow')) {
-                    unlockedTrails.push('rainbow');
-                    localStorage.setItem('dino_trails_unlocked', JSON.stringify(unlockedTrails));
-                }
-                setActiveTrail('rainbow');
-                jackpotResult.textContent = `🌈 ДЖЕКПОТ! Легендарный шлейф «Радуга» активирован!`;
-                jackpotResult.style.color = '#ff00ff';
-                jackpotResult.style.borderColor = '#ff00ff';
-                jackpotResult.style.display = 'block';
-            } else {
-                applyPrize(winner, jackpotResult);
-            }
-
-            if (winner.type === 'coins') casinoStats.won += winner.value;
-            if (winner.type === 'dna') casinoStats.won += winner.value * 5;
-            saveCasinoStats();
+            applyCasinoPrize(data, jackpotResult);
 
             setTimeout(() => {
                 isJackpotSpinning = false;
-                jackpotSpinBtn.textContent = 'КРУТИТЬ (150 🪙)';
+                jackpotSpinBtn.textContent = `КРУТИТЬ (${JACKPOT_COST} 🪙)`;
                 updateCasinoStatsDisplay();
             }, 1500);
         }
@@ -806,6 +1128,8 @@ jackpotSpinBtn.onclick = () => {
 // --- ОТКРЫТИЕ КАЗИНО ---
 rouletteBtn.onclick = () => {
     playSFX('click');
+    // Перед игрой подтягиваем авторитетный баланс с сервера.
+    loadProfileFromServer();
     rouletteResult.style.display = 'none';
     rouletteSlots.forEach(slot => { slot.textContent = '🎁'; slot.classList.remove('win', 'spinning'); });
     jackpotSlot1.textContent = '💎'; jackpotSlot2.textContent = '💎'; jackpotSlot3.textContent = '💎';
@@ -823,63 +1147,88 @@ rouletteBtn.onclick = () => {
 };
 
 // --- БИРЖА ДНК ---
-function getExchangeRate() {
-  const dateKey = new Date().toISOString().slice(0,10);
-  const h = hashCode(dateKey);
-  return 4 + (Math.abs(h) % 12);
+let serverExchangeRate = null;
+let exchangeBuyPending = false;
+
+async function loadExchangeRate() {
+  try {
+    const r = await fetch(`${API_BASE}/api/exchange/rate`);
+    const d = await r.json().catch(() => null);
+    if (r.ok && d && typeof d.rate === 'number') {
+      serverExchangeRate = d.rate;
+      updateExchangeUI();
+    }
+  } catch (e) {
+    console.error('Exchange rate load failed', e);
+  }
 }
 
 function updateExchangeUI() {
-  const rate = getExchangeRate();
-  const buyCost = rate * 10;
-  const sellGain = Math.floor(rate * 0.85 * 10);
-  exchangeRateDisplay.innerHTML = `Курс: 1 🧬 = <strong style="color:#ffd700">${rate}</strong> 🪙`;
-  exchangeBuyBtn.innerHTML = `КУПИТЬ 10 🧬 (${buyCost} 🪙)`;
-  exchangeSellBtn.innerHTML = `ПРОДАТЬ 10 🧬 (+${sellGain} 🪙)`;
+  const rate = serverExchangeRate;
+  const buyCost = rate ? rate * 10 : null;
+  exchangeRateDisplay.innerHTML = rate
+    ? `Курс: 1 🧬 = <strong style="color:#ffd700">${rate}</strong> 🪙`
+    : 'Курс: загрузка...';
+  exchangeBuyBtn.innerHTML = buyCost ? `КУПИТЬ 10 🧬 (${buyCost} 🪙)` : 'КУПИТЬ 10 🧬';
+  exchangeSellBtn.innerHTML = 'ПРОДАЖА ОТКЛЮЧЕНА';
   exchangeCoinsEl.textContent = coins;
   exchangeDnaEl.textContent = dna;
-  exchangeBuyBtn.disabled = coins < buyCost;
-  exchangeBuyBtn.style.opacity = coins < buyCost ? '0.4' : '1';
-  exchangeSellBtn.disabled = dna < 10;
-  exchangeSellBtn.style.opacity = dna < 10 ? '0.4' : '1';
+  exchangeBuyBtn.disabled = !buyCost || exchangeBuyPending || coins < buyCost;
+  exchangeBuyBtn.style.opacity = exchangeBuyBtn.disabled ? '0.4' : '1';
+  exchangeSellBtn.disabled = true;
+  exchangeSellBtn.style.opacity = '0.4';
 }
 
-exchangeBtn.onclick = () => { playSFX('click'); updateExchangeUI(); exchangeModal.style.display = 'block'; };
-
-exchangeBuyBtn.onclick = () => {
-  const rate = getExchangeRate();
-  const cost = rate * 10;
-  if (coins < cost) { showToast('⚠️ Не хватает монет'); return; }
-  coins -= cost;
-  dna += 10;
-  localStorage.setItem('dino_coins', coins);
-  localStorage.setItem('dino_dna', dna);
-  coinsDisplay.textContent = `🪙 ${coins}`;
-  dnaDisplay.textContent = `🧬 ${dna}`;
-  playSFX('buy');
-  showToast(`💱 КУПЛЕНО 10 🧬 за ${cost} 🪙`);
+exchangeBtn.onclick = () => {
+  playSFX('click');
   updateExchangeUI();
-  updateShopUI();
-  updateCasinoCoinsDisplay();
-  saveProfileToServer();
+  exchangeModal.style.display = 'block';
+  loadExchangeRate();
+};
+
+exchangeBuyBtn.onclick = async () => {
+  if (exchangeBuyPending) return;
+  if (!playerName) { showAuthModal(); return; }
+  if (!serverExchangeRate) { showToast('⚠️ Курс ещё не загружен'); return; }
+  const cost = serverExchangeRate * 10;
+  if (coins < cost) { showToast('⚠️ Не хватает монет'); return; }
+
+  exchangeBuyPending = true;
+  updateExchangeUI();
+  try {
+    const d = await enqueueProfileSync(async () => {
+      const r = await apiFetch('/api/exchange/buy', {
+        method: 'POST',
+        body: JSON.stringify({ name: playerName })
+      });
+      const data = await r.json().catch(() => null);
+      if (!r.ok) {
+        const e = new Error(data && data.detail ? data.detail : `HTTP ${r.status}`);
+        e.status = r.status;
+        throw e;
+      }
+      return data;
+    });
+
+    dna += d.dna_gained || 10;
+    localStorage.setItem('dino_dna', dna);
+    applyServerProfile(d, { invalidateSaves: true });
+    dnaDisplay.textContent = `🧬 ${dna}`;
+    playSFX('buy');
+    showToast(`💱 КУПЛЕНО 10 🧬 за ${d.cost} 🪙`);
+  } catch (e) {
+    showToast(`❌ ${casinoErrorText(e)}`);
+    if (e && e.status === 400) loadProfileFromServer();
+  } finally {
+    exchangeBuyPending = false;
+    updateExchangeUI();
+    updateShopUI();
+    updateCasinoCoinsDisplay();
+  }
 };
 
 exchangeSellBtn.onclick = () => {
-  if (dna < 10) { showToast('⚠️ Не хватает ДНК'); return; }
-  const rate = getExchangeRate();
-  const gain = Math.floor(rate * 0.85 * 10);
-  dna -= 10;
-  coins += gain;
-  localStorage.setItem('dino_coins', coins);
-  localStorage.setItem('dino_dna', dna);
-  coinsDisplay.textContent = `🪙 ${coins}`;
-  dnaDisplay.textContent = `🧬 ${dna}`;
-  playSFX('buy');
-  showToast(`💱 ПРОДАНО 10 🧬 за ${gain} 🪙`);
-  updateExchangeUI();
-  updateShopUI();
-  updateCasinoCoinsDisplay();
-  saveProfileToServer();
+  showToast('⚠️ Продажа ДНК отключена: сервер не может проверить клиентскую ДНК');
 };
 
 // --- СПАВН ЧАСТИЦЫ ШЛЕЙФА ---
@@ -1165,8 +1514,7 @@ let hasShield=false;
 let hasDoubleJump=false;
 let shieldTimer=0;
 let megaJumpTimer=0;
-let playerName = localStorage.getItem('dino_player_name') || '';
-let pendingScore = null;
+let playerName = '';
 let comboCount = 0, comboTimer = 0, comboMultiplier = 1;
 let isOverdrive = false;
 let overdriveTimer = 0;
@@ -1292,59 +1640,174 @@ async function loadLeaderboard(){
     leaderboardList.innerHTML='<span style="color:#ff2a2a">Сервер недоступен ❌</span>';
   }
 }
-async function sendScore(name, sc){
-  try{ await fetch(`${API_BASE}/api/score`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,score:sc})}); loadLeaderboard(); }catch(e){console.error(e);}
+// /api/score больше не обновляет рекорд: он приходит только из
+// /api/run/finish после серверной проверки забега.
+let profileSaveSeq = 0;
+let profileSaveAppliedSeq = 0;
+
+// Все операции, меняющие серверный баланс (save и казино), выполняются
+// строго по очереди. Иначе старый /save мог бы прийти на сервер после
+// выигрыша в казино и перезаписать баланс устаревшим значением.
+let profileSyncQueue = Promise.resolve();
+function enqueueProfileSync(task) {
+  const run = profileSyncQueue.then(task, task);
+  profileSyncQueue = run.catch(() => {});
+  return run;
 }
+
+// Применяет профиль, полученный от сервера. Сервер — источник истины
+// по монетам и скинам; локальные ДНК/шлейфы он не трогает.
+function applyServerProfile(d, opts = {}) {
+  if (!d || typeof d.coins !== 'number') return false;
+
+  coins = d.coins;
+  localStorage.setItem('dino_coins', coins);
+
+  if (typeof d.name === 'string' && d.name) {
+    playerName = d.name;
+    authName = d.name;
+    localStorage.setItem('dino_player_name', playerName);
+    localStorage.setItem('dino_auth_name', authName);
+    updateAuthUI();
+  }
+
+  // Скины — серверная валюта: локальный список заменяем серверным, а не
+  // дополняем, чтобы старые локальные «подарки» не оставались навсегда.
+  if (d.unlocked_skins) {
+    try {
+      const arr = JSON.parse(d.unlocked_skins);
+      if (Array.isArray(arr)) {
+        const valid = arr.filter(s => s === 'default' || s === 'raptor' || s === 'ptero');
+        unlockedSkins = Array.from(new Set(['default', ...valid]));
+        localStorage.setItem('dino_unlocked_skins', JSON.stringify(unlockedSkins));
+      }
+    } catch {}
+  }
+  if (!unlockedSkins.includes(selectedSkin)) selectedSkin = 'default';
+  if (d.selected_skin && unlockedSkins.includes(d.selected_skin)) {
+    selectedSkin = d.selected_skin;
+  }
+  localStorage.setItem('dino_selected_skin', selectedSkin);
+
+  if (opts.invalidateSaves) {
+    // Любые ответы /save, отправленные до действия казино, уже устарели.
+    profileSaveAppliedSeq = Math.max(profileSaveAppliedSeq, profileSaveSeq);
+  }
+
+  coinsDisplay.textContent = `🪙 ${coins}`;
+  updateShopUI();
+  renderSkins();
+  updatePlayerSkin();
+  updateCasinoCoinsDisplay();
+  return true;
+}
+
 async function loadProfileFromServer(){
   if (!playerName) return;
-  try {
-    const r = await fetch(`${API_BASE}/api/player/load`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name: playerName}) });
-    const d = await r.json();
-    if (d.coins > coins) { coins = d.coins; localStorage.setItem('dino_coins', coins); }
-    if (d.selected_skin && d.selected_skin !== 'trike') { selectedSkin = d.selected_skin; localStorage.setItem('dino_selected_skin', selectedSkin); }
-    if (d.unlocked_skins) {
-      try {
-        const arr = JSON.parse(d.unlocked_skins);
-        if (Array.isArray(arr)) { arr.forEach(s => { if (!unlockedSkins.includes(s) && s !== 'trike') unlockedSkins.push(s); }); localStorage.setItem('dino_unlocked_skins', JSON.stringify(unlockedSkins)); }
-      } catch {}
-    }
-    updateShopUI(); renderSkins(); updatePlayerSkin(); updateCasinoCoinsDisplay();
-  } catch(e) { console.error('Profile load failed', e); }
+  return enqueueProfileSync(async () => {
+    try {
+      const r = await apiFetch('/api/player/load', {
+        method: 'POST',
+        body: JSON.stringify({ name: playerName })
+      });
+      const d = await r.json().catch(() => null);
+      if (!r.ok) { console.error('Profile load failed', r.status, d); return; }
+      if (!d || typeof d.coins !== 'number') { console.error('Profile load: invalid server response', d); return; }
+
+      // Сервер — единственный источник истины по балансу.
+      applyServerProfile(d);
+    } catch(e) { console.error('Profile load failed', e); }
+  });
 }
+
 async function saveProfileToServer(){
   if (!playerName) return;
-  try {
-    await fetch(`${API_BASE}/api/player/save`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: playerName, coins: coins, quests_done: quests.filter(q=>q.done).length, selected_skin: selectedSkin, unlocked_skins: JSON.stringify(unlockedSkins) }) });
-  } catch(e) { console.error('Profile save failed', e); }
+  // Во время забега монеты ещё не подтверждены сервером: их начислит
+  // /api/run/finish. Промежуточное сохранение только сбросило бы баланс.
+  if (isGameRunning) return;
+  return enqueueProfileSync(async () => {
+    const seq = ++profileSaveSeq;
+    try {
+      const r = await apiFetch('/api/player/save', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: playerName,
+          quests_done: quests.filter(q => q.done).length,
+          selected_skin: selectedSkin
+        })
+      });
+      const d = await r.json().catch(() => null);
+      if (!r.ok) { console.error('Profile save failed', r.status, d); return; }
+      if (!d || typeof d.coins !== 'number') { console.error('Profile save: invalid server response', d); return; }
+
+      // Не даём более старому ответу перезаписать более новый баланс.
+      if (seq < profileSaveAppliedSeq) return;
+      profileSaveAppliedSeq = seq;
+
+      // Сервер — источник истины по монетам и скинам.
+      applyServerProfile(d);
+    } catch(e) { console.error('Profile save failed', e); }
+  });
+}
+
+// Запрос к серверному казино. Клиент не присылает ни ставку, ни приз.
+async function postCasino(path, body) {
+  if (!playerName) {
+    const e = new Error('NO_NAME');
+    e.code = 'NO_NAME';
+    throw e;
+  }
+  const r = await apiFetch(path, {
+    method: 'POST',
+    body: JSON.stringify({ name: playerName, ...body })
+  });
+  const d = await r.json().catch(() => null);
+  if (!r.ok) {
+    const e = new Error(d && d.detail ? d.detail : `HTTP ${r.status}`);
+    e.status = r.status;
+    throw e;
+  }
+  if (!d || typeof d.coins !== 'number' || !d.prize) {
+    const e = new Error('INVALID_RESPONSE');
+    throw e;
+  }
+  return d;
+}
+
+function casinoErrorText(e) {
+  if (e && e.code === 'NO_NAME') return 'Сначала войдите в аккаунт';
+  const message = e && e.message ? e.message : '';
+  if (message.includes('Not enough coins')) return 'Не хватает монет';
+  if (message.includes('Too many requests')) return 'Слишком часто. Подождите пару секунд';
+  if (message.includes('Invalid choice') || message.includes('Invalid dice value')) return 'Некорректный выбор';
+  return 'Сервер недоступен. Попробуйте ещё раз';
 }
 async function claimDailyReward(){
-  if (!playerName) { showToast('⚠️ Сначала сохраните имя рекорда'); return; }
+  if (!playerName) { showAuthModal(); return; }
   try {
-    const r = await fetch(`${API_BASE}/api/player/daily`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name: playerName}) });
-    const d = await r.json();
+    const d = await enqueueProfileSync(async () => {
+      const r = await apiFetch('/api/player/daily', {
+        method: 'POST',
+        body: JSON.stringify({ name: playerName })
+      });
+      const data = await r.json();
+      if (data.status === 'success' && typeof data.coins === 'number') {
+        applyServerProfile({ coins: data.coins });
+      }
+      return data;
+    });
     if (d.status === 'already_claimed') { showToast(`🔥 Награда уже получена сегодня\nСерия: ${d.streak} 🔥`); }
-    else if (d.status === 'success') { coins = d.coins; localStorage.setItem('dino_coins', coins); coinsDisplay.textContent = `🪙 ${coins}`; updateShopUI(); updateCasinoCoinsDisplay(); playSFX('buy'); showToast(`🔥 ЕЖЕДНЕВНАЯ НАГРАДА!\n+${d.reward} 🪙\nСерия: ${d.streak} 🔥`); }
+    else if (d.status === 'success') { playSFX('buy'); showToast(`🔥 ЕЖЕДНЕВНАЯ НАГРАДА!\n+${d.reward} 🪙\nСерия: ${d.streak} 🔥`); }
   } catch(e) { showToast('❌ Сервер недоступен'); }
 }
 
 function updateNameUI(){
-  if (playerName) { playerNameInput.style.display = 'none'; saveRecordBtn.style.display = 'none'; }
-  else {
-    playerNameInput.style.display = 'block';
-    saveRecordBtn.style.display = (pendingScore !== null) ? 'inline-block' : 'none';
-    if (pendingScore !== null) playerNameInput.placeholder = `Ваш счёт: ${pendingScore}. Введите имя!`;
-  }
+  // Имя и рекорд теперь принадлежат аккаунту. Старые поля скрыты,
+  // чтобы не было второго, небезопасного способа «сохранить имя».
+  playerNameInput.style.display = 'none';
+  saveRecordBtn.style.display = 'none';
+  updateAuthUI();
 }
-saveRecordBtn.onclick = () => {
-  const v = playerNameInput.value.trim().slice(0,20);
-  if (!v) { showToast('⚠️ Введите имя!'); return; }
-  playerName = v; localStorage.setItem('dino_player_name', playerName);
-  playerNameInput.value = ''; playerNameInput.style.display = 'none'; saveRecordBtn.style.display = 'none';
-  playSFX('buy'); showToast(`✅ Имя сохранено: ${escapeHTML(playerName)}`);
-  if (pendingScore !== null) { sendScore(playerName, pendingScore); pendingScore = null; }
-  loadProfileFromServer();
-  loadWorldBoss();
-};
 
 function getClassStats(){
   const c = skinList.find(s=>s.id===selectedSkin) || skinList[0];
@@ -1359,6 +1822,7 @@ function updatePlayerSkin(){
   else if (selectedSkin==='raptor') player.classList.add('skin-raptor');
   else if (selectedSkin==='ptero') player.classList.add('skin-ptero');
 }
+let skinBuyPending = false;
 function renderSkins(){
   skinsGrid.innerHTML='';
   skinList.forEach(skin=>{
@@ -1366,10 +1830,47 @@ function renderSkins(){
     const card=document.createElement('div'); card.className=`skin-card ${selectedSkin===skin.id?'active':''}`;
     let priceHtml = isUnlocked ? '' : `<span style="font-size:11px;color:#ffd700;margin-top:5px;">🔒 ${skin.price}</span>`;
     card.innerHTML=`<span class="skin-icon">${skin.icon}</span><span class="skin-name">${skin.name}</span><small style="font-size:9px;color:#888;margin-top:3px">${skin.desc}</small>${priceHtml}`;
-    card.onclick=()=>{
+    card.onclick= async ()=>{
       playSFX('click');
-      if (isUnlocked){ selectedSkin=skin.id; updatePlayerSkin(); renderSkins(); localStorage.setItem('dino_selected_skin', selectedSkin); saveProfileToServer(); }
-      else if (coins>=skin.price){ playSFX('buy'); coins-=skin.price; unlockedSkins.push(skin.id); selectedSkin=skin.id; coinsDisplay.textContent=`🪙 ${coins}`; updatePlayerSkin(); renderSkins(); localStorage.setItem('dino_coins', coins); localStorage.setItem('dino_unlocked_skins', JSON.stringify(unlockedSkins)); localStorage.setItem('dino_selected_skin', selectedSkin); saveProfileToServer(); updateCasinoCoinsDisplay(); }
+      if (isUnlocked){
+        selectedSkin=skin.id; updatePlayerSkin(); renderSkins();
+        localStorage.setItem('dino_selected_skin', selectedSkin);
+        saveProfileToServer();
+        return;
+      }
+      if (!playerName) { showAuthModal(); return; }
+      if (skinBuyPending) return;
+      if (coins < skin.price) { showToast('⚠️ Не хватает монет'); return; }
+
+      skinBuyPending = true;
+      try {
+        const d = await enqueueProfileSync(async () => {
+          const r = await apiFetch('/api/shop/buy-skin', {
+            method: 'POST',
+            body: JSON.stringify({ name: playerName, skin: skin.id })
+          });
+          const data = await r.json().catch(() => null);
+          if (!r.ok) {
+            const e = new Error(data && data.detail ? data.detail : `HTTP ${r.status}`);
+            e.status = r.status;
+            throw e;
+          }
+          return data;
+        });
+
+        // Сервер сам списал монеты, открыл и выбрал скин.
+        applyServerProfile(d, { invalidateSaves: true });
+        if (d.status !== 'already_owned') {
+          playSFX('buy');
+          showToast(`✅ Скин открыт: ${skin.name}`);
+        }
+      } catch (e) {
+        showToast(`❌ ${casinoErrorText(e)}`);
+        if (e && e.status === 400) loadProfileFromServer();
+      } finally {
+        skinBuyPending = false;
+        updateCasinoCoinsDisplay();
+      }
     };
     skinsGrid.appendChild(card);
   });
@@ -1405,20 +1906,43 @@ function updateShopUI(){
   petDrone.style.display = activePet ? 'block':'none'; petDog.style.display = activeDog ? 'block':'none';
 }
 function setupShopBtn(btn, key, price){
-  btn.onclick = ()=>{
+  btn.onclick = async ()=>{
     let has = localStorage.getItem('dino_'+key)==='true';
     let active = has && localStorage.getItem('dino_'+key+'_active')!=='false';
     if (!has) {
-      if (coins >= price) {
-        coins -= price;
-        localStorage.setItem('dino_coins', coins);
-        localStorage.setItem('dino_'+key, 'true');
-        localStorage.setItem('dino_'+key+'_active', 'true');
-        playSFX('buy'); saveProfileToServer();
-        has = true; active = true;
-      } else {
+      if (!playerName) { showAuthModal(); return; }
+      if (coins < price) {
         showToast('⚠️ Не хватает монет');
         return;
+      }
+      if (btn.dataset.busy === '1') return;
+      btn.dataset.busy = '1';
+      try {
+        // Владение расходником остаётся локальным, но монеты списывает сервер.
+        const d = await enqueueProfileSync(async () => {
+          const r = await apiFetch('/api/shop/buy-item', {
+            method: 'POST',
+            body: JSON.stringify({ name: playerName, item: key })
+          });
+          const data = await r.json().catch(() => null);
+          if (!r.ok) {
+            const e = new Error(data && data.detail ? data.detail : `HTTP ${r.status}`);
+            e.status = r.status;
+            throw e;
+          }
+          return data;
+        });
+        applyServerProfile(d, { invalidateSaves: true });
+        localStorage.setItem('dino_'+key, 'true');
+        localStorage.setItem('dino_'+key+'_active', 'true');
+        playSFX('buy');
+        has = true; active = true;
+      } catch (e) {
+        showToast(`❌ ${casinoErrorText(e)}`);
+        if (e && e.status === 400) loadProfileFromServer();
+        return;
+      } finally {
+        delete btn.dataset.busy;
       }
     } else {
       active = !active;
@@ -1452,7 +1976,7 @@ skinsBtn.onclick=()=>{ playSFX('click'); renderSkins(); skinsModal.style.display
 
 dailyChallengeBtn.onclick = () => {
   playSFX('click');
-  if (!playerName) { showToast('⚠️ Сначала сохраните имя в меню'); return; }
+  if (!playerName) { showAuthModal(); return; }
   claimDailyReward();
   startGame(true);
 };
@@ -1581,6 +2105,7 @@ function killBoss(){
   bossProjectileEntities.forEach(p=>p.el.remove()); bossProjectileEntities=[];
   droneProjectileEntities.forEach(p=>p.el.remove()); droneProjectileEntities=[];
   bossHpContainer.style.display='none'; isBossActive=false;
+  runBossesKilled++;
   const bq = quests.find(q=>q.id==='boss'); if(bq){bq.current++; updateQuestProgress('boss'); checkQuestComplete('boss');}
   invincibleUntil = Date.now() + 2000;
   const bossCoinBonus = 30 * loopCount;
@@ -1971,8 +2496,50 @@ function initRun(daily=false){
   updateCasinoStatsDisplay();
 }
 
-function startGame(daily=false){
+function runErrorText(status, data) {
+  const detail = data && data.detail;
+  const text = Array.isArray(detail)
+    ? detail.map(item => item.msg || '').join('; ')
+    : (typeof detail === 'string' ? detail : '');
+  if (status === 401) return 'Войдите в аккаунт';
+  if (status === 429 || text.includes('Too many requests')) {
+    return 'слишком часто, подождите пару секунд';
+  }
+  if (text.toLowerCase().includes('too short')) return 'забег короче 10 секунд';
+  if (text.toLowerCase().includes('run expired')) return 'забег просрочен';
+  return text || `ошибка ${status}`;
+}
+
+let runStartPending = false;
+async function startGame(daily=false){
   initAudio();
+  if (runStartPending || isRunFinalizing) return;
+  if (!playerName) { showAuthModal(); return; }
+
+  runStartPending = true;
+  startBtn.disabled = true;
+  try {
+    const r = await apiFetch('/api/run/start', {
+      method: 'POST',
+      body: JSON.stringify({ name: playerName })
+    });
+    const d = await r.json().catch(() => null);
+    if (!r.ok || !d || !d.run_id) {
+      showToast(`❌ Не удалось начать забег: ${runErrorText(r.status, d)}`);
+      return;
+    }
+    activeRunId = d.run_id;
+    runCoinsStart = coins;
+    runBossesKilled = 0;
+  } catch (e) {
+    console.error('Run start failed', e);
+    showToast('❌ Сервер недоступен. Забег не начат.');
+    return;
+  } finally {
+    runStartPending = false;
+    startBtn.disabled = false;
+  }
+
   initRun(daily);
   const startTier = parseInt(startBiomeSelect.value)||0;
   const showIntro = !daily && !hasSeenIntro && startTier === 0;
@@ -1985,22 +2552,93 @@ function startGame(daily=false){
   }
 }
 
-function endGame(){
+async function endGame(){
   if (!isGameRunning) return;
-  isGameRunning=false; cancelAnimationFrame(animationFrameId); bgMusic.pause(); playSFX('death');
+  isGameRunning=false;
+  isRunFinalizing=true;
+  cancelAnimationFrame(animationFrameId); bgMusic.pause(); playSFX('death');
   setDailySeed(null);
   bossHpContainer.style.display='none';
   if(bossElement){bossElement.remove();bossElement=null;}
   player.classList.remove('running');
   clearEntities();
   trailContainer.innerHTML = '';
-  if (pendingWorldBossDamage > 0) flushWorldBossDamage();
+
   const cs = Math.floor(score/10); const dr = Math.floor(cs/50);
+  const loops = loopCount;
+  const questsDone = quests.filter(q=>q.done).length;
+  const bossesKilled = runBossesKilled;
+  const runId = activeRunId;
+  const coinsEarned = Math.max(0, coins - runCoinsStart);
+
   dna += dr; localStorage.setItem('dino_dna', dna);
   if (cs>highScore){ highScore=cs; localStorage.setItem(isDailyMode?'dino_daily_hs':'dino_highscore', highScore); }
-  if (playerName) { sendScore(playerName, cs); saveProfileToServer(); } else { pendingScore = cs; }
-  menuTitle.textContent='GAME OVER'; menuText.innerHTML=`Счёт: ${cs}<br>Достигнута петля: ♾️ x${loopCount}<br>Получено ДНК: 🧬 +${dr}`; startBtn.textContent='ИГРАТЬ СНОВА';
+
+  menuTitle.textContent='GAME OVER';
+  menuText.innerHTML = `Счёт: ${cs}<br>Достигнута петля: ♾️ x${loops}<br>Получено ДНК: 🧬 +${dr}<br><span style="color:#aaa;font-size:11px;">Начисляем награду...</span>`;
+  startBtn.textContent='ИГРАТЬ СНОВА';
+  startBtn.disabled = true;
   gameMenu.style.display='flex'; updateShopUI(); updatePlayerSkin(); updateNameUI();
+
+  // Урон боссу начисляется до закрытия забега, иначе сервер его отклонит.
+  if (pendingWorldBossDamage > 0) {
+    try { await flushWorldBossDamage(); } catch(e) { console.error('Boss damage flush failed', e); }
+  }
+
+  let finishResult = null;
+  let finishError = '';
+  if (playerName && runId) {
+    try {
+      const r = await apiFetch('/api/run/finish', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: playerName,
+          run_id: runId,
+          score: cs,
+          coins_earned: coinsEarned,
+          quests_completed: questsDone,
+          bosses_killed: bossesKilled,
+          loops: loops
+        })
+      });
+      const d = await r.json().catch(() => null);
+      if (r.ok && d) {
+        finishResult = d;
+        applyServerProfile(d);
+        loadLeaderboard();
+      } else {
+        finishError = runErrorText(r.status, d);
+      }
+    } catch (e) {
+      console.error('Run finish failed', e);
+      finishError = 'сервер недоступен';
+    }
+  }
+  activeRunId = null;
+
+  let rewardHtml = '';
+  if (finishResult) {
+    const awarded = typeof finishResult.coins_awarded === 'number' ? finishResult.coins_awarded : 0;
+    rewardHtml = `<br>Монеты: 🪙 +${awarded}`;
+    if (finishResult.clamped) {
+      rewardHtml += ` <span style="color:#ffd700;font-size:11px;">(ограничено сервером)</span>`;
+    }
+    if (finishResult.score_clamped) {
+      rewardHtml += `<br><span style="color:#ffd700;font-size:11px;">Счёт ограничен сервером по времени забега</span>`;
+    }
+  } else if (finishError) {
+    rewardHtml = `<br><span style="color:#ff2a2a;font-size:11px;">Награда не начислена: ${escapeHTML(finishError)}</span>`;
+  }
+
+  menuText.innerHTML = `Счёт: ${cs}<br>Достигнута петля: ♾️ x${loops}<br>Получено ДНК: 🧬 +${dr}${rewardHtml}`;
+  startBtn.disabled = false;
+  if (finishResult && finishResult.clamped) {
+    showToast('⚠️ Награда ограничена сервером (лимит монет за время забега)');
+  }
+  if (finishError) {
+    showToast(`⚠️ ${finishError}`);
+  }
+  isRunFinalizing = false;
 }
 
 function doJump(){
@@ -2022,6 +2660,6 @@ mobileJumpBtn.addEventListener('touchstart',(e)=>{e.preventDefault(); if(!isGame
 startBtn.onclick = ()=>startGame(false);
 window.addEventListener('keydown', handleKeyDown);
 
-loadLeaderboard(); updateShopUI(); renderQuests(); updatePlayerSkin(); renderSkills(); updateNameUI(); updateGodModeUI();
-loadWorldBoss();
-if (playerName) loadProfileFromServer();
+updateShopUI(); renderQuests(); updatePlayerSkin(); renderSkills(); updateNameUI(); updateGodModeUI();
+loadLeaderboard();
+initAuth();

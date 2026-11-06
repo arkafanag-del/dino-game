@@ -568,3 +568,51 @@ body {
     box-shadow: 0 0 20px #fff, 0 0 30px #ff00ff;
     animation: trailFade 0.6s ease-out forwards;
 }
+
+/* --- АККАУНТ --- */
+#player-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #00ff88;
+    font-size: 10px;
+    padding: 4px 8px;
+    border: 1px solid rgba(0, 255, 136, 0.5);
+    border-radius: 6px;
+    background: rgba(0, 255, 136, 0.08);
+    max-width: 180px;
+}
+#player-badge-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#logout-btn { font-size: 14px; }
+
+.auth-modal {
+    position: fixed;
+    border-color: #00ff88;
+    box-shadow: 0 0 50px rgba(0, 255, 136, 0.4);
+    z-index: 10050;
+    max-height: 90vh;
+}
+.auth-modal h2 { color: #00ff88; text-shadow: 0 0 10px #00ff88; }
+.auth-hint { color: #aaa; font-size: 12px; line-height: 1.5; margin: 0 0 18px; }
+.auth-fields { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.auth-fields input {
+    padding: 12px;
+    font-family: inherit;
+    font-size: 14px;
+    background: #000;
+    color: #00ff88;
+    border: 2px solid #00ff88;
+    border-radius: 8px;
+    outline: none;
+    text-align: center;
+}
+.auth-fields input:focus { box-shadow: 0 0 15px rgba(0, 255, 136, 0.4); }
+.auth-error { min-height: 18px; color: #ff2a2a; font-size: 12px; margin-bottom: 10px; }
+.auth-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.auth-actions .action-btn { min-width: 130px; }
+.auth-note { color: #777; font-size: 11px; margin: 15px 0 0; line-height: 1.5; }
+.exchange-note { color: #777; font-size: 10px; line-height: 1.5; margin: 15px 0 0; }
